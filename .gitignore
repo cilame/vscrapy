@@ -1,0 +1,5 @@
+__pycache__/
+vscrapy.egg-info/
+vscrapy.py.egg-info/
+dist/
+build/
