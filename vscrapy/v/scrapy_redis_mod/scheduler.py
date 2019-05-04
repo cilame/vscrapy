@@ -95,7 +95,7 @@ class Scheduler(object):
             'queue_cls': 'SCHEDULER_QUEUE_CLASS',
             'dupefilter_key': 'SCHEDULER_DUPEFILTER_KEY',
             # We use the default setting name to keep compatibility.
-            'dupefilter_cls': 'DUPEFILTER_CLASS',
+            'dupefilter_cls': 'SCHEDULER_DUPEFILTER_CLASS',
             'serializer': 'SCHEDULER_SERIALIZER',
         }
         for name, setting_name in optional.items():

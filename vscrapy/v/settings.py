@@ -13,15 +13,27 @@ LOG_LEVEL = 'DEBUG'
 
 
 
+# 默认使用魔改后的各种类插件
+SCHEDULER_DUPEFILTER_CLASS = "v.scrapy_redis_mod.dupefilter.RFPDupeFilter"
+SCHEDULER_QUEUE_CLASS      = "v.scrapy_redis_mod.queue.PriorityQueue"
+SCHEDULER                  = "v.scrapy_redis_mod.scheduler.Scheduler"
+
+
+ITEM_PIPELINES = {
+    'v.pipelines.VPipeline':                      300,
+    'v.scrapy_redis_mod.pipelines.RedisPipeline': 400,
+}
+
+
+
+
+
 
 # 4 test
 SCHEDULER_FLUSH_ON_START = True
+DUPEFILTER_DEBUG = True
 
-
-
-
-# 魔改处理的部分。
-# 1/ scrapy_mod 的处理
+# 1/ scrapy 的魔改处理，这里的配置只能写在这里，不能写在 scrapy_redis 的默认配置里面。
 EXTENSIONS = {
     'scrapy.extensions.corestats.CoreStats': None, # 关闭这个日志处理，使用魔改的日志处理
     'v.scrapy_mod.redis_corestats.RedisCoreStats': True,
@@ -31,18 +43,9 @@ STATS_CLASS = 'v.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
 
 
-# 2/ scrapy_redis 魔改处理
-DUPEFILTER_CLASS = "v.scrapy_redis_mod.dupefilter.RFPDupeFilter"
-SCHEDULER_PERSIST = True
-SCHEDULER_QUEUE_CLASS = "v.scrapy_redis_mod.queue.PriorityQueue"
-ITEM_PIPELINES = {
-    'v.pipelines.ExamplePipeline': 300,
-    'v.scrapy_redis_mod.pipelines.RedisPipeline': 400,
-}
-SCHEDULER = "v.scrapy_redis_mod.scheduler.Scheduler"
 
-# 是否对 start_url 使用 set 数据类型。
-# REDIS_START_URLS_AS_SET = False # 默认False
+
+
 
 
 

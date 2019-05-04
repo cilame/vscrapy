@@ -13,11 +13,6 @@ from scrapy import Request
 class MySpider(RedisSpider):
     """Spider that reads urls from redis queue (myspider:start_urls)."""
     name = 'v'
-    redis_key = 'myspider:start_urls'
-
-    # def start_requests(self):
-    #     for i in self.next_requests():
-    #         yield i
 
     def parse(self, response):
         def mk_url_headers():

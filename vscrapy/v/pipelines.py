@@ -4,7 +4,7 @@
 # See: http://doc.scrapy.org/topics/item-pipeline.html
 from datetime import datetime
 
-class ExamplePipeline(object):
+class VPipeline(object):
     def process_item(self, item, spider):
         item["crawled"] = datetime.utcnow()
         item["spider"] = spider.name

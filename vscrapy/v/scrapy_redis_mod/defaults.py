@@ -1,11 +1,5 @@
 import redis
 
-
-# For standalone use.
-DUPEFILTER_KEY = 'dupefilter:%(timestamp)s'
-
-PIPELINE_KEY = '%(spider)s:items'
-
 REDIS_CLS = redis.StrictRedis
 REDIS_ENCODING = 'utf-8'
 # Sane connection defaults.
@@ -16,10 +10,29 @@ REDIS_PARAMS = {
     'encoding': REDIS_ENCODING,
 }
 
-SCHEDULER_QUEUE_KEY = '%(spider)s:requests'
-SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
-SCHEDULER_DUPEFILTER_KEY = '%(spider)s:dupefilter'
-SCHEDULER_DUPEFILTER_CLASS = 'scrapy_redis.dupefilter.RFPDupeFilter'
 
-START_URLS_KEY = '%(name)s:start_urls'
-START_URLS_AS_SET = False
+'''
+后面根据需要魔改下面的关于 redis 队列配置相关的部分，
+让其能够接收 spiderid 以及 taskid 的标识，并且不要将需要的配置在此处，
+需要配置在 settings 里面不然初始化会存在问题，
+这里的配置仅仅作为一个模板来使用
+'''
+
+SCHEDULER_QUEUE_KEY      = '%(spider)s:requests'
+SCHEDULER_DUPEFILTER_KEY = '%(spider)s:dupefilter'
+START_URLS_KEY           = '%(name)s:start_urls'
+START_URLS_AS_SET        = False
+DUPEFILTER_KEY           = 'dupefilter:%(timestamp)s'
+PIPELINE_KEY             = '%(spider)s:items'
+
+
+# 默认使用魔改后的各种类插件
+SCHEDULER_DUPEFILTER_CLASS = "v.scrapy_redis_mod.dupefilter.RFPDupeFilter"
+SCHEDULER_QUEUE_CLASS      = "v.scrapy_redis_mod.queue.PriorityQueue"
+SCHEDULER                  = "v.scrapy_redis_mod.scheduler.Scheduler"
+
+
+ITEM_PIPELINES = {
+    'v.pipelines.VPipeline':                      300,
+    'v.scrapy_redis_mod.pipelines.RedisPipeline': 400,
+}
