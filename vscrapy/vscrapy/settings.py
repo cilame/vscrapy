@@ -27,6 +27,11 @@ EXTENSIONS = {
 }
 STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
+# 魔改的日志处理当中目前只是实现了功能，但是还是缺少一些决定行的框架
+# 也就是框架的执行模式方式。目前的问题主要出现在初始化上。
+# 1/ 考虑增加对spiderid，用于监控spider
+# 2/ 考虑需要初始化的数据结构
+
 
 
 
@@ -41,7 +46,20 @@ ITEM_PIPELINES = {
     'vscrapy.scrapy_redis_mod.pipelines.RedisPipeline': 400,
 }
 
+# 至少需要魔改四个 scrapy_redis 源码中的四个文件，目的是要让这几个任务都能识别到任务id
+# 1/ dupefilter
+# 2/ queue
+# 3/ scheduler
+# 4/ pipelines
 
+# 配置redis链接配置的一些方法
+# REDIS_HOST = '47.99.126.229'
+# REDIS_PORT = 6379
+REDIS_PARAMS = {
+    'host':'47.99.126.229',
+    'port':6379,
+    'password':'vilame',
+}
 
 
 

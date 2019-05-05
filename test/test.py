@@ -17,7 +17,7 @@ import win32clipboard as w
 import win32api as a
 w.OpenClipboard()
 w.EmptyClipboard()
-w.SetClipboardData(w.CF_TEXT, b"redis-cli lpush v:start_urls http://www.baidu.com")
+w.SetClipboardData(w.CF_TEXT, b"redis-cli -h 47.99.126.229 -a vilame lpush v:start_urls http://www.baidu.com")
 w.CloseClipboard()
 # 等待命令行打开后模拟粘贴命令将命令粘贴入控制台
 import time; time.sleep(1)
