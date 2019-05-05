@@ -1,7 +1,7 @@
 from scrapy.spiders import Rule
 from scrapy.linkextractors import LinkExtractor
 
-from v.scrapy_redis_mod.spiders import RedisCrawlSpider
+from vscrapy.scrapy_redis_mod.spiders import RedisCrawlSpider
 
 
 class MyCrawler(RedisCrawlSpider):

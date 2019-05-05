@@ -1,4 +1,4 @@
-from v.scrapy_redis_mod.spiders import RedisSpider
+from vscrapy.scrapy_redis_mod.spiders import RedisSpider
 
 import re
 import json

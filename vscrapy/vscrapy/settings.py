@@ -6,8 +6,8 @@
 #     http://doc.scrapy.org/topics/settings.html
 #
 
-SPIDER_MODULES = ['v.spiders']
-NEWSPIDER_MODULE = 'v.spiders'
+SPIDER_MODULES = ['vscrapy.spiders']
+NEWSPIDER_MODULE = 'vscrapy.spiders'
 LOG_LEVEL = 'DEBUG'
 
 
@@ -23,22 +23,22 @@ SCHEDULER_FLUSH_ON_START = True
 # 1/ scrapy 的魔改处理
 EXTENSIONS = {
     'scrapy.extensions.corestats.CoreStats': None, # 关闭这个日志处理，使用魔改的日志处理
-    'v.scrapy_mod.redis_corestats.RedisCoreStats': True,
+    'vscrapy.scrapy_mod.redis_corestats.RedisCoreStats': True,
 }
-STATS_CLASS = 'v.scrapy_mod.redis_statscollectors.RedisStatsCollector'
+STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
 
 
 
 
 # 2/ scrapy_redis 的魔改配置
-SCHEDULER_DUPEFILTER_CLASS = "v.scrapy_redis_mod.dupefilter.RFPDupeFilter"
-SCHEDULER_QUEUE_CLASS      = "v.scrapy_redis_mod.queue.PriorityQueue"
-SCHEDULER                  = "v.scrapy_redis_mod.scheduler.Scheduler"
+SCHEDULER_DUPEFILTER_CLASS = "vscrapy.scrapy_redis_mod.dupefilter.RFPDupeFilter"
+SCHEDULER_QUEUE_CLASS      = "vscrapy.scrapy_redis_mod.queue.PriorityQueue"
+SCHEDULER                  = "vscrapy.scrapy_redis_mod.scheduler.Scheduler"
 
 ITEM_PIPELINES = {
-    'v.pipelines.VPipeline':                      300,
-    'v.scrapy_redis_mod.pipelines.RedisPipeline': 400,
+    'vscrapy.pipelines.VscrapyPipeline':                300,
+    'vscrapy.scrapy_redis_mod.pipelines.RedisPipeline': 400,
 }
 
 
