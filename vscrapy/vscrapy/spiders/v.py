@@ -14,8 +14,14 @@ class MySpider(RedisSpider):
     """Spider that reads urls from redis queue (myspider:start_urls)."""
     name = 'v'
 
+
+    def schedule_next_requests(self):
+        for i in range(10):
+            print(123)
+
+
     def parse(self, response):
-        def mk_url_headers():
+        def mk_url_headers(num):
             def quote_val(url):
                 url = unquote(url)
                 for i in re.findall('=([^=&]+)',url):
@@ -24,8 +30,8 @@ class MySpider(RedisSpider):
             url = (
                 'https://www.baidu.com/s'
                 '?ie=UTF-8'
-                '&wd=百度'
-            )
+                '&wd=百度{}'
+            ).format(num)
             url = quote_val(url)
             headers = {
                 "accept-encoding": "gzip, deflate", # auto delete br encoding. cos requests and scrapy can not decode it.
@@ -34,15 +40,16 @@ class MySpider(RedisSpider):
                 "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.75 Safari/537.36"
             }
             return url,headers
-        url,headers = mk_url_headers()
-        meta = {}
-        r = Request(
-                url,
-                headers  = headers,
-                callback = self.parse1,
-                meta     = meta,
-            )
-        yield r
+        for i in range(25):
+            url,headers = mk_url_headers(i)
+            meta = {}
+            r = Request(
+                    url,
+                    headers  = headers,
+                    callback = self.parse1,
+                    meta     = meta,
+                )
+            yield r
 
 
     def parse1(self, response):
@@ -68,3 +75,33 @@ class MySpider(RedisSpider):
             if "str_f13_1"   in d: d["str_f13_1"  ] = re.sub(r'\s+',' ',d["str_f13_1"])
             if "str_c_11"    in d: d["str_c_11"   ] = re.sub(r'\s+',' ',d["str_c_11"])
             yield d
+
+        def mk_url_headers(num):
+            def quote_val(url):
+                url = unquote(url)
+                for i in re.findall('=([^=&]+)',url):
+                    url = url.replace(i,'{}'.format(quote(i)))
+                return url
+            url = (
+                'https://www.baidu.com/s'
+                '?ie=UTF-8'
+                '&wd=百度{}'
+            ).format(num)
+            url = quote_val(url)
+            headers = {
+                "accept-encoding": "gzip, deflate", # auto delete br encoding. cos requests and scrapy can not decode it.
+                "accept-language": "zh-CN,zh;q=0.9",
+                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.75 Safari/537.36"
+            }
+            return url,headers
+        for i in range(25,50):
+            url,headers = mk_url_headers(i)
+            meta = {}
+            r = Request(
+                    url,
+                    headers  = headers,
+                    callback = self.parse1,
+                    meta     = meta,
+                )
+            yield r

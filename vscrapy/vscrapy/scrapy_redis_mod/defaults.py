@@ -1,4 +1,5 @@
 import redis
+import uuid
 
 REDIS_CLS = redis.StrictRedis
 REDIS_ENCODING = 'utf-8'
@@ -11,6 +12,7 @@ REDIS_PARAMS = {
 }
 
 
+mac = uuid.UUID(int = uuid.getnode()).hex[-12:]
 '''
 后面根据需要魔改下面的关于 redis 队列配置相关的部分，
 让其能够接收 spiderid 以及 taskid 的标识，并且不要将需要的配置在此处，
@@ -18,12 +20,12 @@ REDIS_PARAMS = {
 这里的配置仅仅作为一个模板来使用
 '''
 
-SCHEDULER_QUEUE_KEY      = '%(spider)s:requests'
-SCHEDULER_DUPEFILTER_KEY = '%(spider)s:dupefilter'
+SCHEDULER_QUEUE_KEY      = 'vscrapy:gqueue:%(spider)s:requests'
+SCHEDULER_DUPEFILTER_KEY = 'vscrapy:gqueue:%(spider)s:dupefilter'
 START_URLS_KEY           = '%(name)s:start_urls'
 START_URLS_AS_SET        = False
 DUPEFILTER_KEY           = 'dupefilter:%(timestamp)s'
-PIPELINE_KEY             = '%(spider)s:items'
+PIPELINE_KEY             = 'vscrapy:gqueue:%(spider)s:items'
 
 
 # 默认使用魔改后的各种类插件

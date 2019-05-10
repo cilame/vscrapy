@@ -83,8 +83,6 @@ class RedisMixin(object):
     # 下面的部分主要是处理 start_url 的部分，这里的处理是永久打开直至程序关闭的
     # 所以可以将此处魔改成对传递过来的参数各种初始化的地方，在这里也将是生成任务id的最佳地方。
     # 这里可以传过来一个简单的 json 数据来装脚本的代码部分，方便脚本的传递以及实例化
-    # 考虑了一下，为了经量不破坏原始代码的结构，方便后续 scrapy_redis 有修改的时候这边可以经量不修改
-    # 将会考虑在将要开启的 spider 中进行重载。
     def next_requests(self):
         """Returns a request to be scheduled or none."""
         use_set = self.settings.getbool('REDIS_START_URLS_AS_SET', defaults.START_URLS_AS_SET)

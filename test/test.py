@@ -1,11 +1,20 @@
 import os
+import time
 
 LEVEL = 'DEBUG'
 
 try:
     os.chdir('../vscrapy')
     os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
+    time.sleep(1)
+    os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
+    time.sleep(1)
+    os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
 except:
+    os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
+    time.sleep(1)
+    os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
+    time.sleep(1)
     os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
 
 try:

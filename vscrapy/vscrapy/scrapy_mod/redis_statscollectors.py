@@ -28,12 +28,13 @@ class RedisStatsCollector:
         'start_time',
     )
 
-    _spider_unique_id_name = 'vscrapy:spiderid/index'
-    _spider_id_debg_format = 'vscrapy:spiders:mac/{}:start/{}/stat/%(spider)s'
+    _local_max = 'taskid:{}:%(spider)s'
+    _spider_id_debg_format = 'vscrapy:spiders:pc/{}:start/{}/stat/%(spider)s'
     _spider_id_task_format = 'vscrapy:spiders:taskid/{}/stat/%(spider)s'
 
     def __init__(self, crawler):
         self._dump = crawler.settings.getbool('STATS_DUMP')
+        self._debug_pc = crawler.settings.getbool('DEBUG_PC')
         self._stats = {}
         self.server     = from_settings(crawler.settings)
         mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:], self._mk_unique_spider_id()
@@ -47,8 +48,6 @@ class RedisStatsCollector:
     # 对于每一个spiderid都生成一个唯一的spider处理stat信息
     def _mk_unique_spider_id(self):
         return time.strftime("%Y%m%d-%H%M%S",time.localtime())
-        return self.server.incrby(self._spider_unique_id_name)
-
 
     # 该函数没有被框架使用，属于开发者使用的接口
     def get_stats(self, spider=None):
@@ -112,10 +111,10 @@ class RedisStatsCollector:
 
 
 
-    def _mod_task(self, spider):
+    def get_taskid(self, spider):
         '''
         可以在这个函数处挂钩处理，也是我这个框架的核心魔法。
-        这里的函数环境向上两级就是各种日志信号的执行，这些信号内一般都存在request和response结构体。
+        这里的函数环境向上两级就是各种日志信号的执行，这些信号空间内一般都存在request和response结构体。
         因为一些信息可以通过request和response中的meta传递，
         这样的话，就给了挂钩的空间，让stat能够带有一些类似任务id信息。
         比较方便处理多任务情况下的任务处理。
@@ -125,34 +124,29 @@ class RedisStatsCollector:
         v = inspect.stack()[2][0].f_locals
         if 'request' in v:
             taskid = v['request'].meta.get('taskid') or 0
-
-
-            
-            # 这里考虑的是对任务的参数各种配置的初始化的各种问题
-
-
-
-
-
-            tname = self._spider_id_task_format.format(taskid) % {'spider':spider.name}
         elif 'response' in v:
             taskid = v['response'].meta.get('taskid') or 0
         else:
-            pass
+            taskid = 0
+        return taskid
 
     # 该框架主要使用到的两个接口就是
-    # set_value
-    # inc_value
+    # set_value  一般用于字符串，并且只会更新一次
+    # inc_value  一般用于数字，需要随时更新
     def set_value(self, key, value, spider=None):
-        name = self.spider_fmt % {'spider':spider.name}
+        sname = self.spider_fmt % {'spider':spider.name}
+        tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
         if type(value) == datetime: value = str(value + timedelta(hours=8)) # 将默认utc时区转到中国，方便我使用
-        self.server.hset(name, key, value)
+        if self._debug_pc: self.server.hset(sname, key, value)
+        self.server.hsetnx(tname, key, value)
+
 
     def inc_value(self, key, count=1, start=0, spider=None):
         if spider:
-            self._mod_task(spider)
-            name = self.spider_fmt % {'spider':spider.name}
-            self.server.hincrby(name, key, count)
+            sname = self.spider_fmt % {'spider':spider.name}
+            tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
+            if self._debug_pc: self.server.hincrby(sname, key, count)
+            self.server.hincrby(tname, key, count)
         else:
             '''
             部分参数会从spider还没有加载的时候就开始记录日志了，这样不行的
@@ -167,16 +161,21 @@ class RedisStatsCollector:
     # 该比较函数有可能会每次请求redis，所以经优化考虑，在本地先存储一个最大值
     # 如果超过最大值就再请求redis，比较redis内部深度，这样对redis的压力稍微小一点
     def max_value(self, key, value, spider=None):
-        self._stats.setdefault(spider.name, {})
-        if key not in self._stats[spider.name]:
-            self._stats[spider.name][key] = value
-            name = self.spider_fmt % {'spider':spider.name}
-            self.server.hset(name, key, value)
+        def update_redis(key, value):
+            sname = self.spider_fmt % {'spider':spider.name}
+            tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
+            if self._debug_pc: self.server.hset(sname, key, value)
+            self.server.hset(tname, key, value)
+
+        localmax = self._local_max.format(self.get_taskid(spider)) % {'spider':spider.name}
+        self._stats.setdefault(localmax, {})
+        if key not in self._stats[localmax]:
+            self._stats[localmax][key] = value
+            update_redis(key, value)
         else:
-            if value > self._stats[spider.name][key]:
-                self._stats[spider.name][key] = value
-                name = self.spider_fmt % {'spider':spider.name}
-                self.server.hset(name, key, value)
+            if value > self._stats[localmax][key]:
+                self._stats[localmax][key] = value
+                update_redis(key, value)
 
     # 该函数看似有用，实际上在框架里面并没有使用到。
     # 如果后续开发需要使用，就按照max_value的格式处写一份即可

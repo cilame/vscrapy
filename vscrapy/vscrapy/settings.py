@@ -62,7 +62,9 @@ REDIS_PARAMS = {
 }
 
 
-
+# 如果设置为True，将会额外通过 pc 的 mac 标签生成一个统计信息来统计单个PC的执行数量
+# 用于 DEBUG 不同的 pc 间可能出现的问题。
+DEBUG_PC = False
 
 
 
