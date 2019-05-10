@@ -170,6 +170,13 @@ class Scheduler(object):
         self.df.clear()
         self.queue.clear()
 
+
+
+
+
+
+    # 后面的 queue 使用的是 SCHEDULER_QUEUE_KEY 作为关键字来处理正常的请求队列
+    # 默认使用的队列为 '%(spider)s:requests' 所以可以在这里魔改，增加对 taskid 的处理部分
     def enqueue_request(self, request):
         if not request.dont_filter and self.df.request_seen(request):
             self.df.log(request, self.spider)

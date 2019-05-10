@@ -11,11 +11,11 @@ logger = logging.getLogger(__name__)
 from scrapy.statscollectors import StatsCollector
 from vscrapy.scrapy_redis_mod.connection import from_settings
 
-
-
+import uuid
+import time
 import inspect
 
-class RedisStatsCollector(StatsCollector):
+class RedisStatsCollector:
 
     # 这个日志主要是字符串
     e = (
@@ -29,22 +29,25 @@ class RedisStatsCollector(StatsCollector):
     )
 
     _spider_unique_id_name = 'vscrapy:spiderid/index'
-    _spider_id_name_format = 'vscrapy:spiders:id/{}/stat/%(spider)s'
+    _spider_id_debg_format = 'vscrapy:spiders:mac/{}:start/{}/stat/%(spider)s'
+    _spider_id_task_format = 'vscrapy:spiders:taskid/{}/stat/%(spider)s'
 
     def __init__(self, crawler):
-        super(RedisStatsCollector, self).__init__(crawler)
+        self._dump = crawler.settings.getbool('STATS_DUMP')
+        self._stats = {}
         self.server     = from_settings(crawler.settings)
-        self.spider_id  = self._mk_unique_spider_id()
-        self.spider_fmt = self._spider_id_name_format.format(self.spider_id)
+        mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:], self._mk_unique_spider_id()
+        self.spider_fmt = self._spider_id_debg_format.format(mac, sid)
         self.encoding   = self.server.connection_pool.connection_kwargs.get('encoding')
-        
+
+        # 每台机器通过 mac 使用各自机器的日志空间
+        # 由于这个 id 的实现本身就是用来检测机器可能出现的问题
+        # 一般来说需要考虑机器影响问题，所以使用 mac 地址，需要更详细的横向对比功能
+
     # 对于每一个spiderid都生成一个唯一的spider处理stat信息
     def _mk_unique_spider_id(self):
+        return time.strftime("%Y%m%d-%H%M%S",time.localtime())
         return self.server.incrby(self._spider_unique_id_name)
-
-
-
-
 
 
     # 该函数没有被框架使用，属于开发者使用的接口
@@ -109,7 +112,7 @@ class RedisStatsCollector(StatsCollector):
 
 
 
-    def _mod_task(self, key):
+    def _mod_task(self, spider):
         '''
         可以在这个函数处挂钩处理，也是我这个框架的核心魔法。
         这里的函数环境向上两级就是各种日志信号的执行，这些信号内一般都存在request和response结构体。
@@ -121,16 +124,20 @@ class RedisStatsCollector(StatsCollector):
         '''
         v = inspect.stack()[2][0].f_locals
         if 'request' in v:
-            print('request in', key)
-            if 'kkk' not in v['request'].meta: # 可以考虑在这里实现任务id的配置，让每个任务都拥有各自的任务id
-                v['request'].meta.update({'kkk': 123})
-            print(v['request'].meta)
+            taskid = v['request'].meta.get('taskid') or 0
+
+
+            
+            # 这里考虑的是对任务的参数各种配置的初始化的各种问题
+
+
+
+
+
+            tname = self._spider_id_task_format.format(taskid) % {'spider':spider.name}
         elif 'response' in v:
-            print('response in', key)
-            print(v['response'].meta)
-            taskid = v['response'].meta.get('kkk') or 0
+            taskid = v['response'].meta.get('taskid') or 0
         else:
-            print('asdfasdfasdf')
             pass
 
     # 该框架主要使用到的两个接口就是
@@ -143,7 +150,7 @@ class RedisStatsCollector(StatsCollector):
 
     def inc_value(self, key, count=1, start=0, spider=None):
         if spider:
-            self._mod_task(key)
+            self._mod_task(spider)
             name = self.spider_fmt % {'spider':spider.name}
             self.server.hincrby(name, key, count)
         else:
