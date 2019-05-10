@@ -10,15 +10,9 @@ from urllib.parse import (
 
 from scrapy import Request
 
-class MySpider(RedisSpider):
+class VSpider(RedisSpider):
     """Spider that reads urls from redis queue (myspider:start_urls)."""
     name = 'v'
-
-
-    def schedule_next_requests(self):
-        for i in range(10):
-            print(123)
-
 
     def parse(self, response):
         def mk_url_headers(num):
