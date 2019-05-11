@@ -5,8 +5,6 @@ from scrapy.spiders import Spider, CrawlSpider
 from . import connection, defaults
 from .utils import bytes_to_str
 
-import json
-
 
 class RedisMixin(object):
     """Mixin class to implement reading urls from a redis queue."""
@@ -97,70 +95,30 @@ class RedisMixin(object):
             if not data:
                 # Queue empty.
                 break
-            data = json.loads(data)
-
-
-            # 这里需要生成最初的请求,基本上就是需要通过传过来的data进行最初的脚本对象,
-            # 通过生成对象来调配该对象的 start_requests 函数
-            print('---------- script -----------')
-            # script 是一个字符串的脚本，传入之后将针对该字符串的环境进行传递
-            def get_obj_from_script(__very_unique_script__ = None):
-                __very_unique_dict__ = {}
-                if __very_unique_script__ is not None:
-                    exec(__very_unique_script__ + '''
-__very_unique_item__ = None
-for __very_unique_item__ in locals():
-    if __very_unique_item__ == '__very_unique_dict__' or \
-       __very_unique_item__ == '__very_unique_script__' or \
-       __very_unique_item__ == '__very_unique_item__':
-           continue
-    __very_unique_dict__[__very_unique_item__] = locals()[__very_unique_item__]
-''')
-                    ret = []
-                    for name,obj in __very_unique_dict__.items():
-                        if getattr(obj, 'mro', None) and Spider in obj.mro():
-                            ret.append([name,obj])
-                    return ret, __very_unique_dict__
-
-            # 这里的处理还在实验当中，突然发现一个小的问题，由于异步关系，
-            # 代码真实执行的地方可能不在这里，所以各种配置环境参数的方法目前一点用都没有。
-
-            # 还在实验当中
-            ret, env = get_obj_from_script(data['script'])
-            env.update({'ret': ret})
-            if ret:
-                v = ret[0][1]()
-                for i in v.start_requests():
-                    i._plusmeta = {}
-                    i._plusmeta.update({'taskid':1})
-                    yield i
-                # for i in dir(v):
-                #     if not i.startswith('__'):
-                #         c = getattr(v,i)
-                #         try:
-                #             import inspect
-                #             print(inspect.getsource(c))
-                #             print(i, c)
-                #         except:
-                #             print('========= error', i, c)
-
-            print('---------- script -----------')
-
-
-
-
+            req = self.make_request_from_data(data)
             if req:
                 yield req
                 found += 1
             else:
                 self.logger.debug("Request not made from data: %r", data)
-            break
 
+        if found:
+            self.logger.debug("Read %s requests from '%s'", found, self.redis_key)
 
+    def make_request_from_data(self, data):
+        """Returns a Request instance from data coming from Redis.
 
+        By default, ``data`` is an encoded URL. You can override this method to
+        provide your own message decoding.
 
-        # if found:
-        #     self.logger.debug("Read %s requests from '%s'", found, self.redis_key)
+        Parameters
+        ----------
+        data : bytes
+            Message from redis.
+
+        """
+        url = bytes_to_str(data, self.redis_encoding)
+        return self.make_requests_from_url(url)
 
     def schedule_next_requests(self):
         """Schedules a request if available"""

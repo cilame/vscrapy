@@ -14,7 +14,29 @@ class VSpider(RedisSpider):
     """Spider that reads urls from redis queue (myspider:start_urls)."""
     name = 'v'
 
+
+
+
+
+
+
+
+
     def parse(self, response):
+
+        # import pprint
+        # pprint.pprint(response.meta)
+        # return
+
+
+        # import inspect
+        # s = inspect.stack()
+        # for i in s:
+        #     print(i)
+        # print(response._plusmeta)
+
+
+
         def mk_url_headers(num):
             def quote_val(url):
                 url = unquote(url)

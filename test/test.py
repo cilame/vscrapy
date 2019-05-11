@@ -1,39 +1,53 @@
 import os
 import time
+import json
+import re
 
 LEVEL = 'DEBUG'
 
 try:
     os.chdir('../vscrapy')
     os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
-    time.sleep(1)
+    # time.sleep(1)
     os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
-    time.sleep(1)
+    # time.sleep(1)
     os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
 except:
     os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
-    time.sleep(1)
+    # time.sleep(1)
     os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
-    time.sleep(1)
+    # time.sleep(1)
     os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
 
-try:
-    os.system('start powershell -NoExit')
-except:
-    os.system('start cmd /k')
 
 
-# 将命令写入剪贴板
-import win32clipboard as w
-import win32api as a
-w.OpenClipboard()
-w.EmptyClipboard()
-w.SetClipboardData(w.CF_TEXT, b"redis-cli -h 47.99.126.229 -a vilame lpush v:start_urls http://www.baidu.com")
-w.CloseClipboard()
-# 等待命令行打开后模拟粘贴命令将命令粘贴入控制台
-import time; time.sleep(1)
-a.keybd_event(0x11,0,0,0)
-a.keybd_event(0x56,0,0,0)
-a.keybd_event(0x56,0,2,0)
-a.keybd_event(0x11,0,2,0)
 
+
+
+
+
+
+# 直接写入内容DEBUG
+os.chdir(os.path.dirname(os.getcwd())+r'\vscrapy\vscrapy')
+
+with open('settings.py',encoding='utf-8') as f:
+    s = re.findall(r'REDIS_PARAMS *= *\{[^\{\}]+\}', f.read(), re.M)[0]
+    host     = re.findall(r"'host' *: *'([^']+)'",s )
+    port     = re.findall(r"'port' *: *(\d+)", s)
+    password = re.findall(r"'password' *: *'([^']+)'", s)
+    db       = re.findall(r"'db' *: *'([^']+)'", s)
+    host     = host[0]      if host else 'localhost'
+    port     = int(port[0]) if port else 6379
+    password = password[0]  if password else None
+    db       = db[0]        if db else 0
+
+import redis
+r = redis.StrictRedis(host,port,db,password)
+with open('./spiders/test_script.py',encoding='utf-8') as f:
+    script = f.read()
+
+
+j = {'nihao':123, 'script':script}
+d = json.dumps(j)
+r.lpush('vscrapy:gqueue:v:start_urls', d)
+# r.lpush('vscrapy:gqueue:v:start_urls', d)

@@ -22,7 +22,7 @@ mac = uuid.UUID(int = uuid.getnode()).hex[-12:]
 
 SCHEDULER_QUEUE_KEY      = 'vscrapy:gqueue:%(spider)s:requests'
 SCHEDULER_DUPEFILTER_KEY = 'vscrapy:gqueue:%(spider)s:dupefilter'
-START_URLS_KEY           = '%(name)s:start_urls'
+START_URLS_KEY           = 'vscrapy:gqueue:%(name)s:start_urls'
 START_URLS_AS_SET        = False
 DUPEFILTER_KEY           = 'dupefilter:%(timestamp)s'
 PIPELINE_KEY             = 'vscrapy:gqueue:%(spider)s:items'

@@ -121,11 +121,17 @@ class RedisStatsCollector:
         后续可能会将该处的处理放到其他带有 self.server 操作的函数里面
         实现多任务的分隔处理。
         '''
+        return 0
+
         v = inspect.stack()[2][0].f_locals
         if 'request' in v:
-            taskid = v['request'].meta.get('taskid') or 0
+            taskid = v['request']._plusmeta.get('taskid') or 0
+        elif 'request' in v and 'response' in v:
+            taskid = v['request']._plusmeta.get('taskid') or 0
+            v['response']._plusmeta = v['request']._plusmeta.copy()
         elif 'response' in v:
-            taskid = v['response'].meta.get('taskid') or 0
+            taskid = v['response']._plusmeta.get('taskid') or 0
+            v['response']._plusmeta = v['request']._plusmeta.copy()
         else:
             taskid = 0
         return taskid

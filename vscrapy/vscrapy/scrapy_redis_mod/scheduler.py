@@ -1,5 +1,6 @@
 import importlib
 import six
+import inspect
 
 from scrapy.utils.misc import load_object
 
@@ -176,8 +177,15 @@ class Scheduler(object):
 
 
     # 后面的 queue 使用的是 SCHEDULER_QUEUE_KEY 作为关键字来处理正常的请求队列
-    # 默认使用的队列为 '%(spider)s:requests' 所以可以在这里魔改，增加对 taskid 的处理部分
+    # 现在考虑的是对 request 和 response 对象额外增加一个 _plusmeta 来装各种额外的参数
+    # 后续怎么处理还需要更多的考虑， request 目前是能够传递了，但是到 response 这里貌似还是差了一点点。
     def enqueue_request(self, request):
+        v = inspect.stack()[3][0].f_locals
+
+        for i in inspect.stack():
+            print(i,list(i[0].f_locals))
+
+        if v.get('request'): request._plusmeta = v.get('request')._plusmeta
         if not request.dont_filter and self.df.request_seen(request):
             self.df.log(request, self.spider)
             return False
