@@ -8,6 +8,45 @@ from .utils import bytes_to_str
 import json
 
 
+import os
+import sys
+import hmac
+import importlib
+import traceback
+
+def mk_work_home(path='.vscrapy_temp'):
+    home = os.environ.get('HOME')
+    home = home if home else os.environ.get('HOMEDRIVE') + os.environ.get('HOMEPATH')
+    path = os.path.join(home, path)
+    if not os.path.isdir(path): os.makedirs(path)
+    if path not in sys.path: sys.path.append(path)
+    return path
+
+# 创建脚本存放环境空间
+mk_work_home()
+
+
+def save_script_as_a_module_file(script):
+    try:
+        path = mk_work_home()
+        filename = '_' + hmac.new(b'',script.encode(),'md5').hexdigest() + '.py'
+        filepath = os.path.join(path, filename)
+        if not os.path.isfile(filepath):
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(script)
+        return filename.replace('.py', '')
+    except:
+        traceback.print_exc()
+
+def load_spider_from_module(name, module_name):
+    module = importlib.import_module(module_name)
+    for i in dir(module):
+        c = getattr(module, i)
+        n = getattr(c, 'name', None)
+        s = getattr(c, 'start_requests', None)
+        if s and n == name:
+            return c
+
 class RedisMixin(object):
     """Mixin class to implement reading urls from a redis queue."""
     redis_key = None
@@ -16,6 +55,10 @@ class RedisMixin(object):
 
     # Redis client placeholder.
     server = None
+
+
+    spider_objs = {}
+
 
     def start_requests(self):
         """Returns a batch of start requests from redis."""
@@ -92,6 +135,10 @@ class RedisMixin(object):
         # XXX: Do we need to use a timeout here?
         found = 0
         # TODO: Use redis pipeline execution.
+
+        def get_unique_task_id():
+            return self.server.incrby('vscrapy:taskidx')
+
         while found < self.redis_batch_size:
             data = fetch_one(self.redis_key)
             if not data:
@@ -99,68 +146,23 @@ class RedisMixin(object):
                 break
             data = json.loads(data)
 
-
             # 这里需要生成最初的请求,基本上就是需要通过传过来的data进行最初的脚本对象,
-            # 通过生成对象来调配该对象的 start_requests 函数
-            print('---------- script -----------')
-            # script 是一个字符串的脚本，传入之后将针对该字符串的环境进行传递
-            def get_obj_from_script(__very_unique_script__ = None):
-                __very_unique_dict__ = {}
-                if __very_unique_script__ is not None:
-                    exec(__very_unique_script__ + '''
-__very_unique_item__ = None
-for __very_unique_item__ in locals():
-    if __very_unique_item__ == '__very_unique_dict__' or \
-       __very_unique_item__ == '__very_unique_script__' or \
-       __very_unique_item__ == '__very_unique_item__':
-           continue
-    __very_unique_dict__[__very_unique_item__] = locals()[__very_unique_item__]
-''')
-                    ret = []
-                    for name,obj in __very_unique_dict__.items():
-                        if getattr(obj, 'mro', None) and Spider in obj.mro():
-                            ret.append([name,obj])
-                    return ret, __very_unique_dict__
-
-            # 这里的处理还在实验当中，突然发现一个小的问题，由于异步关系，
-            # 代码真实执行的地方可能不在这里，所以各种配置环境参数的方法目前一点用都没有。
-
-            # 还在实验当中
-            ret, env = get_obj_from_script(data['script'])
-            env.update({'ret': ret})
-            if ret:
-                v = ret[0][1]()
-                for i in v.start_requests():
-                    i._plusmeta = {}
-                    i._plusmeta.update({'taskid':1})
-                    yield i
-                # for i in dir(v):
-                #     if not i.startswith('__'):
-                #         c = getattr(v,i)
-                #         try:
-                #             import inspect
-                #             print(inspect.getsource(c))
-                #             print(i, c)
-                #         except:
-                #             print('========= error', i, c)
-
-            print('---------- script -----------')
-
-
-
-
-            if req:
-                yield req
+            # 通过生成对象来调配该对象的 start_requests 函数来生成最开始的请求
+            module_name = save_script_as_a_module_file(data['script'])
+            spider_obj  = load_spider_from_module(data['name'], module_name)
+            tid = None
+            for i in spider_obj().start_requests():
+                if tid is None:
+                    tid = get_unique_task_id()
+                    self.server.set('vscrapy:script:{}'.format(module_name), json.dumps(data))
+                i._plusmeta = {}
+                i._plusmeta.update({'taskid': tid, 'module_name': module_name, 'spider_name': data['name']})
+                yield i
                 found += 1
-            else:
-                self.logger.debug("Request not made from data: %r", data)
             break
 
-
-
-
-        # if found:
-        #     self.logger.debug("Read %s requests from '%s'", found, self.redis_key)
+        if found:
+            self.logger.debug("Read %s requests from new task '%s'", found, tid)
 
     def schedule_next_requests(self):
         """Schedules a request if available"""

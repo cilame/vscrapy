@@ -47,7 +47,7 @@ with open('./spiders/test_script.py',encoding='utf-8') as f:
     script = f.read()
 
 
-j = {'nihao':123, 'script':script}
+j = {'nihao':123, 'script':script, 'name': 'test'}
 d = json.dumps(j)
 r.lpush('vscrapy:gqueue:v:start_urls', d)
 # r.lpush('vscrapy:gqueue:v:start_urls', d)

@@ -1,6 +1,3 @@
-"""
-Scrapy extension for collecting scraping stats
-"""
 import redis
 import pprint
 import logging
@@ -11,8 +8,6 @@ logger = logging.getLogger(__name__)
 from scrapy.statscollectors import StatsCollector
 from vscrapy.scrapy_redis_mod.connection import from_settings
 
-import uuid
-import time
 import inspect
 
 class RedisStatsCollector:
@@ -28,17 +23,19 @@ class RedisStatsCollector:
         'start_time',
     )
 
-    _local_max = 'taskid:{}:%(spider)s'
-    _spider_id_debg_format = 'vscrapy:spiders:pc/{}:start/{}/stat/%(spider)s'
-    _spider_id_task_format = 'vscrapy:spiders:taskid/{}/stat/%(spider)s'
+    # _local_max = 'taskid:{}:%(spider)s'
+    # mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:],time.strftime("%Y%m%d-%H%M%S",time.localtime())
+    # _spider_id_debg_format = 'vscrapy:stats:pc/{}:start/{}/stat/%(spider)s'.format(mac, sid)
+    # _spider_id_task_format = 'vscrapy:stats:%(spider)s/taskid/{}/stat'
 
     def __init__(self, crawler):
-        self._dump = crawler.settings.getbool('STATS_DUMP')
-        self._debug_pc = crawler.settings.getbool('DEBUG_PC')
-        self._stats = {}
+        self._dump      = crawler.settings.getbool('STATS_DUMP')
+        self._debug_pc  = crawler.settings.getbool('DEBUG_PC')
+        self._spider_id_debg_format = crawler.settings.get('DEBUG_PC_FORMAT')
+        self._spider_id_task_format = crawler.settings.get('TASK_ID_FORMAT')
+        self._local_max = crawler.settings.get('DEPTH_MAX_FORMAT')
+        self._stats     = {}
         self.server     = from_settings(crawler.settings)
-        mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:], self._mk_unique_spider_id()
-        self.spider_fmt = self._spider_id_debg_format.format(mac, sid)
         self.encoding   = self.server.connection_pool.connection_kwargs.get('encoding')
 
         # 每台机器通过 mac 使用各自机器的日志空间
@@ -47,11 +44,11 @@ class RedisStatsCollector:
 
     # 对于每一个spiderid都生成一个唯一的spider处理stat信息
     def _mk_unique_spider_id(self):
-        return time.strftime("%Y%m%d-%H%M%S",time.localtime())
+        return 
 
     # 该函数没有被框架使用，属于开发者使用的接口
     def get_stats(self, spider=None):
-        name = self.spider_fmt % {'spider':spider.name}
+        name = self._spider_id_debg_format % {'spider':spider.name}
         _stat = {}
         for key,val in self.server.hgetall(name).items():
             key,val = key.decode(self.encoding),val.decode(self.encoding)
@@ -80,13 +77,13 @@ class RedisStatsCollector:
     # 该函数没有被框架使用，属于开发者自己用于增加功能修改的接口，可能在后续个人开发中的初始化时候能用到
     def set_stats(self, stats, spider=None):
         for key in stats:
-            name = self.spider_fmt % {'spider':spider.name}
+            name = self._spider_id_debg_format % {'spider':spider.name}
             self.server.hset(name, key, stats[key])
 
     # 该函数和 set_stats 函数一样使用的概率较低，而且使用的插件在一般情况下是默认不装的，这里防御性处理一下
     def get_value(self, key, default=None, spider=None):
         if spider:
-            name = self.spider_fmt % {'spider':spider.name}
+            name = self._spider_id_debg_format % {'spider':spider.name}
             val = self.server.hget(name, key)
             if val:
                 val = val.decode(self.encoding)
@@ -111,7 +108,7 @@ class RedisStatsCollector:
 
 
 
-    def get_taskid(self, spider):
+    def get_taskid(self, spider, deep=2):
         '''
         可以在这个函数处挂钩处理，也是我这个框架的核心魔法。
         这里的函数环境向上两级就是各种日志信号的执行，这些信号空间内一般都存在request和response结构体。
@@ -121,17 +118,13 @@ class RedisStatsCollector:
         后续可能会将该处的处理放到其他带有 self.server 操作的函数里面
         实现多任务的分隔处理。
         '''
-        return 0
-
-        v = inspect.stack()[2][0].f_locals
+        v = inspect.stack()[deep][0].f_locals
         if 'request' in v:
             taskid = v['request']._plusmeta.get('taskid') or 0
         elif 'request' in v and 'response' in v:
             taskid = v['request']._plusmeta.get('taskid') or 0
-            v['response']._plusmeta = v['request']._plusmeta.copy()
         elif 'response' in v:
             taskid = v['response']._plusmeta.get('taskid') or 0
-            v['response']._plusmeta = v['request']._plusmeta.copy()
         else:
             taskid = 0
         return taskid
@@ -140,7 +133,7 @@ class RedisStatsCollector:
     # set_value  一般用于字符串，并且只会更新一次
     # inc_value  一般用于数字，需要随时更新
     def set_value(self, key, value, spider=None):
-        sname = self.spider_fmt % {'spider':spider.name}
+        sname = self._spider_id_debg_format % {'spider':spider.name}
         tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
         if type(value) == datetime: value = str(value + timedelta(hours=8)) # 将默认utc时区转到中国，方便我使用
         if self._debug_pc: self.server.hset(sname, key, value)
@@ -149,7 +142,7 @@ class RedisStatsCollector:
 
     def inc_value(self, key, count=1, start=0, spider=None):
         if spider:
-            sname = self.spider_fmt % {'spider':spider.name}
+            sname = self._spider_id_debg_format % {'spider':spider.name}
             tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
             if self._debug_pc: self.server.hincrby(sname, key, count)
             self.server.hincrby(tname, key, count)
@@ -168,8 +161,8 @@ class RedisStatsCollector:
     # 如果超过最大值就再请求redis，比较redis内部深度，这样对redis的压力稍微小一点
     def max_value(self, key, value, spider=None):
         def update_redis(key, value):
-            sname = self.spider_fmt % {'spider':spider.name}
-            tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
+            sname = self._spider_id_debg_format % {'spider':spider.name}
+            tname = self._spider_id_task_format.format(self.get_taskid(spider, 3)) % {'spider':spider.name}
             if self._debug_pc: self.server.hset(sname, key, value)
             self.server.hset(tname, key, value)
 

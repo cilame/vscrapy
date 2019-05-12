@@ -27,10 +27,9 @@ EXTENSIONS = {
 }
 STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
-# 魔改的日志处理当中目前只是实现了功能，但是还是缺少一些决定行的框架
-# 也就是框架的执行模式方式。目前的问题主要出现在初始化上。
-# 1/ 考虑增加对spiderid，用于监控spider
-# 2/ 考虑需要初始化的数据结构
+
+
+
 
 
 
@@ -62,11 +61,34 @@ REDIS_PARAMS = {
 }
 
 
+
+
+# 一些格式
 # 如果设置为True，将会额外通过 pc 的 mac 标签生成一个统计信息来统计单个PC的执行数量
-# 用于 DEBUG 不同的 pc 间可能出现的问题。
+# 用于 DEBUG 不同的 pc 间执行的情况。
 DEBUG_PC = False
 
+import uuid, time
+mac = uuid.UUID(int = uuid.getnode()).hex[-12:]
+sid = time.strftime("%Y%m%d-%H%M%S",time.localtime())
+DEBUG_PC_FORMAT     = 'vscrapy:stats:pc/{}:start/{}/stat/%(spider)s'.format(mac, sid)
+TASK_ID_FORMAT      = 'vscrapy:stats:%(spider)s/taskid/{}/stat'
+DEPTH_MAX_FORMAT    = 'taskid:{}:%(spider)s'
 
+
+
+
+
+
+
+# 中间件
+SPIDER_MIDDLEWARES = {
+    'vscrapy.middlewares.VSpiderMiddleware': 0,
+}
+
+DOWNLOADER_MIDDLEWARES = { 
+    'vscrapy.middlewares.VDownloaderMiddleware': 0, 
+}
 
 
 

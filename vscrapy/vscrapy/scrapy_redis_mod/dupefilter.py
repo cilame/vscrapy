@@ -95,10 +95,12 @@ class RFPDupeFilter(BaseDupeFilter):
         bool
 
         """
-        fp = self.request_fingerprint(request)
-        # This returns the number of values added, zero if already exists.
-        added = self.server.sadd(self.key, fp)
-        return added == 0
+        tid = request._plusmeta.get('taskid')
+        if tid:
+            fp = self.request_fingerprint(request)
+            # This returns the number of values added, zero if already exists.
+            added = self.server.sadd(self.key.format(tid), fp)
+            return added == 0
 
     def request_fingerprint(self, request):
         """Returns a fingerprint for a given request.

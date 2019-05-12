@@ -20,7 +20,7 @@ def request_to_dict(request, spider=None):
     eb = request.errback
     if callable(eb):
         eb = _find_method(spider, eb)
-    request._plusmeta.update({'__call_err__':{'callable':cb,'errback':eb}})
+    request._plusmeta.update({'__callerr__':{'callback':cb,'errback':eb}})
     d = {
         'url': to_unicode(request.url),  # urls should be safe (safe_string_url)
         'callback': 'parse',
@@ -75,12 +75,7 @@ def request_from_dict(d, spider=None):
 # 让这个函数跳过原本的对象验证，将 callback，errorback 与 spider 取消绑定的关系
 def _find_method(obj, func):
     if obj:
-        try:
-            func_self = six.get_method_self(func)
-        except AttributeError:  # func has no __self__
-            pass
-        else:
-            return six.get_method_function(func).__name__
+        return func.__name__
     raise ValueError("Function %s is not a method of: %s" % (func, obj))
 
 

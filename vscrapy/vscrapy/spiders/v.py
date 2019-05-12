@@ -1,123 +1,46 @@
-from vscrapy.scrapy_redis_mod.spiders import RedisSpider
-
-import re
-import json
-from urllib.parse import (
-    unquote,
-    quote,
-    urlencode,
+from vscrapy.scrapy_redis_mod.spiders import (
+    RedisSpider,
+    load_spider_from_module,
+    save_script_as_a_module_file,
 )
 
+import json
 from scrapy import Request
 
 class VSpider(RedisSpider):
     """Spider that reads urls from redis queue (myspider:start_urls)."""
     name = 'v'
 
-
-
-
-
-
-
-
-
     def parse(self, response):
 
-        # import pprint
-        # pprint.pprint(response.meta)
-        # return
+        spider_name = response._plusmeta.get('spider_name')
+        module_name = response._plusmeta.get('module_name')
+        __callerr__ = response._plusmeta.get('__callerr__')
 
+        # 在传递脚本的 start_requests 执行时会执行一次将脚本加载成对象放入
+        # 如果是非 start_requests 执行的任务则需要在 parse 函数里面确认加载进框架
+        # 并且不同的机器也需要考虑脚本的分配获取，所以脚本也需要上传。
+        if module_name not in self.spider_objs:
+            try:
+                self.spider_objs[module_name] = load_spider_from_module(spider_name, module_name)
+            except:
+                data = self.server.get('vscrapy:script:{}'.format(module_name))
+                data = json.loads(data)
+                module_name = save_script_as_a_module_file(data['script'])
+                self.spider_objs[module_name] = load_spider_from_module(spider_name, module_name)
 
-        # import inspect
-        # s = inspect.stack()
-        # for i in s:
-        #     print(i)
-        # print(response._plusmeta)
+        spider = self.spider_objs[module_name]
+        parsefunc = getattr(spider, __callerr__.get('callback'))
+        parsedata = parsefunc(spider, response)
+        if parsedata:
+            if getattr(parsedata, '__iter__') and type(parsedata) != str:
+                for r in parsedata:
+                    if isinstance(r, (Request,)):
+                        r._plusmeta = response._plusmeta
+                    yield r
+            elif isinstance(parsedata, (Request,)):
+                r = parsedata
+                r._plusmeta = response._plusmeta
+            else:
+                return parsedata
 
-
-
-        def mk_url_headers(num):
-            def quote_val(url):
-                url = unquote(url)
-                for i in re.findall('=([^=&]+)',url):
-                    url = url.replace(i,'{}'.format(quote(i)))
-                return url
-            url = (
-                'https://www.baidu.com/s'
-                '?ie=UTF-8'
-                '&wd=百度{}'
-            ).format(num)
-            url = quote_val(url)
-            headers = {
-                "accept-encoding": "gzip, deflate", # auto delete br encoding. cos requests and scrapy can not decode it.
-                "accept-language": "zh-CN,zh;q=0.9",
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.75 Safari/537.36"
-            }
-            return url,headers
-        for i in range(25):
-            url,headers = mk_url_headers(i)
-            meta = {}
-            r = Request(
-                    url,
-                    headers  = headers,
-                    callback = self.parse1,
-                    meta     = meta,
-                )
-            yield r
-
-
-    def parse1(self, response):
-        # If you need to parse another string in the parsing function.
-        # use "etree.HTML(text)" or "Selector(text=text)" to parse it.
-
-        class none:pass
-        none.extract = lambda:None
-        for x in response.xpath('//div/h3[@class="t"]/parent::*'):
-            d = {}
-            d["href_8"]      = (x.xpath('./h3/a[1][@target]/@href') or [none])[0].extract()                           # [cnt:8] [len:73] http://www.baidu.com/link?url=...
-            d["str_all"]     = x.xpath('string(.)')[0].extract()                                                      # [cnt:9] [len:125] 百度网址大全百度网址大全 -- 简单可依赖的上网导航... ...
-            d["str_t"]       = x.xpath('string(./h3[@class="t"])')[0].extract()                                       # [cnt:9] [len:6] 百度网址大全
-            if "str_all"     in d: d["str_all"    ] = re.sub(r'\s+',' ',d["str_all"])
-            if "str_t"       in d: d["str_t"      ] = re.sub(r'\s+',' ',d["str_t"])
-            if "str_c"       in d: d["str_c"      ] = re.sub(r'\s+',' ',d["str_c"])
-            if "str_c_1"     in d: d["str_c_1"    ] = re.sub(r'\s+',' ',d["str_c_1"])
-            if "str_f13"     in d: d["str_f13"    ] = re.sub(r'\s+',' ',d["str_f13"])
-            if "str_c_2"     in d: d["str_c_2"    ] = re.sub(r'\s+',' ',d["str_c_2"])
-            if "str_None"    in d: d["str_None"   ] = re.sub(r'\s+',' ',d["str_None"])
-            if "str_None_15" in d: d["str_None_15"] = re.sub(r'\s+',' ',d["str_None_15"])
-            if "str_c_10"    in d: d["str_c_10"   ] = re.sub(r'\s+',' ',d["str_c_10"])
-            if "str_f13_1"   in d: d["str_f13_1"  ] = re.sub(r'\s+',' ',d["str_f13_1"])
-            if "str_c_11"    in d: d["str_c_11"   ] = re.sub(r'\s+',' ',d["str_c_11"])
-            yield d
-
-        def mk_url_headers(num):
-            def quote_val(url):
-                url = unquote(url)
-                for i in re.findall('=([^=&]+)',url):
-                    url = url.replace(i,'{}'.format(quote(i)))
-                return url
-            url = (
-                'https://www.baidu.com/s'
-                '?ie=UTF-8'
-                '&wd=百度{}'
-            ).format(num)
-            url = quote_val(url)
-            headers = {
-                "accept-encoding": "gzip, deflate", # auto delete br encoding. cos requests and scrapy can not decode it.
-                "accept-language": "zh-CN,zh;q=0.9",
-                "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.75 Safari/537.36"
-            }
-            return url,headers
-        for i in range(25,50):
-            url,headers = mk_url_headers(i)
-            meta = {}
-            r = Request(
-                    url,
-                    headers  = headers,
-                    callback = self.parse1,
-                    meta     = meta,
-                )
-            yield r

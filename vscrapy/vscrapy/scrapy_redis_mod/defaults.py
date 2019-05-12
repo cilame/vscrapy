@@ -20,8 +20,8 @@ mac = uuid.UUID(int = uuid.getnode()).hex[-12:]
 这里的配置仅仅作为一个模板来使用
 '''
 
-SCHEDULER_QUEUE_KEY      = 'vscrapy:gqueue:%(spider)s:requests'
-SCHEDULER_DUPEFILTER_KEY = 'vscrapy:gqueue:%(spider)s:dupefilter'
+SCHEDULER_QUEUE_KEY      = 'vscrapy:gqueue:%(spider)s/requests'
+SCHEDULER_DUPEFILTER_KEY = 'vscrapy:gqueue:%(spider)s/taskid/{}/dupefilter'
 START_URLS_KEY           = 'vscrapy:gqueue:%(name)s:start_urls'
 START_URLS_AS_SET        = False
 DUPEFILTER_KEY           = 'dupefilter:%(timestamp)s'

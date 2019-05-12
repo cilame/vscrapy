@@ -124,18 +124,6 @@ class Scheduler(object):
     def open(self, spider):
         self.spider = spider
 
-
-
-
-        # 可以在打开这里处理spiderid的配置
-        # 后面的任务id根据提交任务的情况来实现
-        # 1/ 处理 dupefilter  过滤池
-        # 2/ 处理 queue       任务管道
-        # 
-        # 现在需要实现dupefilter和queue这两个类的实现
-
-
-
         try:
             self.queue = load_object(self.queue_cls)(
                 server=self.server,
@@ -171,21 +159,7 @@ class Scheduler(object):
         self.df.clear()
         self.queue.clear()
 
-
-
-
-
-
-    # 后面的 queue 使用的是 SCHEDULER_QUEUE_KEY 作为关键字来处理正常的请求队列
-    # 现在考虑的是对 request 和 response 对象额外增加一个 _plusmeta 来装各种额外的参数
-    # 后续怎么处理还需要更多的考虑， request 目前是能够传递了，但是到 response 这里貌似还是差了一点点。
     def enqueue_request(self, request):
-        v = inspect.stack()[3][0].f_locals
-
-        for i in inspect.stack():
-            print(i,list(i[0].f_locals))
-
-        if v.get('request'): request._plusmeta = v.get('request')._plusmeta
         if not request.dont_filter and self.df.request_seen(request):
             self.df.log(request, self.spider)
             return False
