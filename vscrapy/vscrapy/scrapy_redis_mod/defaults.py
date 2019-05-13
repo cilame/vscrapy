@@ -28,6 +28,11 @@ DUPEFILTER_KEY           = 'dupefilter:%(timestamp)s'
 PIPELINE_KEY             = 'vscrapy:gqueue:%(spider)s:items'
 
 
+# 任务停止时的清理工作，清理过滤池，清理 DEBUG_PC 任务记录
+CLEAR_DUPEFILTER = True
+CLEAR_DEBUG_PC = False
+
+
 # 默认使用魔改后的各种类插件
 SCHEDULER_DUPEFILTER_CLASS = "v.scrapy_redis_mod.dupefilter.RFPDupeFilter"
 SCHEDULER_QUEUE_CLASS      = "v.scrapy_redis_mod.queue.PriorityQueue"

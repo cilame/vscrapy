@@ -29,10 +29,10 @@ class RedisStatsCollector:
     # _spider_id_task_format = 'vscrapy:stats:%(spider)s/taskid/{}/stat'
 
     def __init__(self, crawler):
-        self._dump      = crawler.settings.getbool('STATS_DUMP')
-        self._debug_pc  = crawler.settings.getbool('DEBUG_PC')
         self._spider_id_debg_format = crawler.settings.get('DEBUG_PC_FORMAT')
         self._spider_id_task_format = crawler.settings.get('TASK_ID_FORMAT')
+        self._dump      = crawler.settings.getbool('STATS_DUMP')
+        self._debug_pc  = crawler.settings.getbool('DEBUG_PC')
         self._local_max = crawler.settings.get('DEPTH_MAX_FORMAT')
         self._stats     = {}
         self.server     = from_settings(crawler.settings)
@@ -67,20 +67,15 @@ class RedisStatsCollector:
 
 
 
-
-
-
-
-
-
-
-    # 该函数没有被框架使用，属于开发者自己用于增加功能修改的接口，可能在后续个人开发中的初始化时候能用到
+    # 该函数没有被框架使用，属于开发者自己用于增加功能修改的接口，可能在后续个人开发中的初始化时候可能用到
     def set_stats(self, stats, spider=None):
         for key in stats:
             name = self._spider_id_debg_format % {'spider':spider.name}
             self.server.hset(name, key, stats[key])
 
-    # 该函数和 set_stats 函数一样使用的概率较低，而且使用的插件在一般情况下是默认不装的，这里防御性处理一下
+    # 该函数和 set_stats 函数一样使用的概率较低，而且默认的插件在一般情况下是默认不使用该函数的，这里防御性处理一下
+    # 检查了以下，貌似也就是 logstats 这个插件会用到，所以可能有点问题，
+    # 但是，那个插件因为目前的情况下暂时没有多大的意义放弃了（logstats：用于打印平均的爬取和item量）。
     def get_value(self, key, default=None, spider=None):
         if spider:
             name = self._spider_id_debg_format % {'spider':spider.name}
@@ -102,10 +97,6 @@ class RedisStatsCollector:
                 return default
         else:
             return default
-
-
-
-
 
 
     def get_taskid(self, spider, deep=2):
@@ -130,8 +121,11 @@ class RedisStatsCollector:
         return taskid
 
     # 该框架主要使用到的两个接口就是
-    # set_value  一般用于字符串，并且只会更新一次
+    # set_value  一般用于字符串（开启和关闭的时间和关闭的原因），并且只会更新一次
     # inc_value  一般用于数字，需要随时更新
+    # 后续发现开启关闭爬虫的时间并不是任务开启的时间，所以这里的任务基本不会被用到
+    # 并且，开始任务的时间将会放置在 start_requests 函数当中进行处理，
+    # 后续的关闭的时机也可能会在监听 start_urls 的管道的函数里面进行收尾处理
     def set_value(self, key, value, spider=None):
         sname = self._spider_id_debg_format % {'spider':spider.name}
         tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}

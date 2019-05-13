@@ -21,7 +21,7 @@ except:
 
 
 
-
+# 
 
 
 
@@ -46,8 +46,8 @@ r = redis.StrictRedis(host,port,db,password)
 with open('./spiders/test_script.py',encoding='utf-8') as f:
     script = f.read()
 
-
-j = {'nihao':123, 'script':script, 'name': 'test'}
+taskid = r.incrby('vscrapy:taskidx')
+j = {'nihao':123, 'script':script, 'name': 'test', 'taskid': taskid}
 d = json.dumps(j)
 r.lpush('vscrapy:gqueue:v:start_urls', d)
 # r.lpush('vscrapy:gqueue:v:start_urls', d)

@@ -15,6 +15,7 @@ class VSpiderMiddleware(object):
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
         s = cls()
+        # 取消开启的日志
         # crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
         return s
 
@@ -63,6 +64,7 @@ class VDownloaderMiddleware(object):
     def from_crawler(cls, crawler):
         # This method is used by Scrapy to create your spiders.
         s = cls()
+        # 取消开启的日志
         # crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
         return s
 

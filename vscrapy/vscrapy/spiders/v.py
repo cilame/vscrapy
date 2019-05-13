@@ -37,10 +37,16 @@ class VSpider(RedisSpider):
                 for r in parsedata:
                     if isinstance(r, (Request,)):
                         r._plusmeta = response._plusmeta
-                    yield r
+                        yield r
+                    else:
+                        # 这里大概就是 item对象或者是字典
+                        yield r
             elif isinstance(parsedata, (Request,)):
                 r = parsedata
                 r._plusmeta = response._plusmeta
+                yield r
             else:
-                return parsedata
+                # 这里大概就是 item对象或者是字典
+                yield parsedata
 
+        # 后面可以考虑在这里对item的输出进行挂钩，让输出数据能带有一些额外的信息
