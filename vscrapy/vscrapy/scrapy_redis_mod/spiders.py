@@ -11,6 +11,7 @@ import os
 import sys
 import json
 import hmac
+import pprint
 import importlib
 import traceback
 from datetime import datetime, timedelta
@@ -131,10 +132,11 @@ class RedisMixin(object):
         # 这里是将该任务开启绑定两个不停执行的函数，
         # 1/ 为了检查已经停止的任务并且清理任务的空间。
         # 2/ 为了获取到 start_url 进行任务的初始化并且处理任务空间的问题。
-        self.limit_check = 2 # 这个参数是想让不同的任务的检查时机稍微错开一点，不要都挤在 _stop_clear 一次迭代中
+        self.limit_check = 0 # 这个参数是想让不同的任务的检查时机稍微错开一点，不要都挤在 _stop_clear 一次迭代中
         self.limit_same  = 2
-        self.interval    = 15 # 多少秒执行一次 检测关闭任务
+        self.interval    = 5 # 多少秒执行一次 检测关闭任务
         # (理论上平均检测关闭的时间大概为 (limit_check+1) * (limit_same+1) * interval )
+        # 测试时可以适量调整小一些方便查看框架的问题
         self.interval_s  = 2 # 多少秒执行一次 检测启动任务
         crawler.signals.connect(self.spider_opened, signal=signals.spider_opened)
 
@@ -144,6 +146,16 @@ class RedisMixin(object):
         # 2/ 启动任务加载函数
         task.LoopingCall(self._stop_clear).start(self.interval)
         task.LoopingCall(self.schedule_next_requests).start(self.interval_s)
+
+    def _get_snapshot(self, stat_key):
+        _snapshot = self.server.hgetall(stat_key)
+        enqueue, dequeue = 0, 0
+        snapshot = {}
+        for k,v in _snapshot.items():
+            if k.decode() == 'scheduler/enqueued/redis': enqueue += int(v.decode())
+            if k.decode() == 'scheduler/dequeued/redis': dequeue += int(v.decode())
+            snapshot[k.decode()] = v.decode()
+        return snapshot, enqueue, dequeue
 
     def _stop_clear(self):
         num = 0
@@ -156,10 +168,17 @@ class RedisMixin(object):
             else:
                 self.spider_tids[taskid]['check_times'] = 0
                 stat_key = self._spider_id_task_format.format(taskid) % {'spider': self.name}
-                snapshot = self.server.hgetall(stat_key)
-                snapshot = hmac.new(b'',str(snapshot).encode(),'md5').hexdigest()
-                if snapshot != self.spider_tids[taskid]['stat_snapshot']:
-                    self.spider_tids[taskid]['stat_snapshot'] = snapshot
+
+                snapshot, enqueue, dequeue = self._get_snapshot(stat_key)
+                snapshot_e2d = enqueue == dequeue
+                snapshot_md5 = hmac.new(b'',str(snapshot).encode(),'md5').hexdigest()
+
+                # test log.
+                snapshot.update({'taskid':taskid})
+                self.logger.debug(pprint.pformat(snapshot))
+
+                if snapshot_md5 != self.spider_tids[taskid]['stat_snapshot'] or not snapshot_e2d:
+                    self.spider_tids[taskid]['stat_snapshot'] = snapshot_md5
                     self.spider_tids[taskid]['same_snapshot_times'] = 0
                 else:
                     self.spider_tids[taskid]['same_snapshot_times'] += 1
@@ -180,10 +199,13 @@ class RedisMixin(object):
                         del self.spider_tids[taskid]
                         del self.spider_objs[module_name]
                         self.log_stat(taskid, 'finish_time')
+                        snapshot,_,_ = self._get_snapshot(stat_key)
+                        snapshot.update({'taskid':taskid})
+                        self.logger.info(pprint.pformat(snapshot))
         if num == 0:
-            self.logger.debug("Spider Task is Empty.")
+            self.logger.info("Spider Task is Empty.")
         else:
-            self.logger.debug("Check if the task stops [check_number:{}].".format(num))
+            self.logger.info("Check Task Stoping [check_task_number:{}].".format(num))
 
     def schedule_next_requests(self):
         """Schedules a request if available"""

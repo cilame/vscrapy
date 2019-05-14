@@ -38,7 +38,7 @@ STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
 # 2/ scrapy_redis 的魔改配置
 SCHEDULER_DUPEFILTER_CLASS = "vscrapy.scrapy_redis_mod.dupefilter.RFPDupeFilter"
-SCHEDULER_QUEUE_CLASS      = "vscrapy.scrapy_redis_mod.queue.PriorityQueue"
+SCHEDULER_QUEUE_CLASS      = "vscrapy.scrapy_redis_mod.queue.FifoQueue" #PriorityQueue
 SCHEDULER                  = "vscrapy.scrapy_redis_mod.scheduler.Scheduler"
 
 ITEM_PIPELINES = {
@@ -55,19 +55,22 @@ ITEM_PIPELINES = {
 # 配置redis链接配置的一些方法
 # REDIS_HOST = '47.99.126.229'
 # REDIS_PORT = 6379
-REDIS_PARAMS = {
-    'host':'47.99.126.229',
-    'port':6379,
-    'password':'vilame',
-}
-
-
+# REDIS_ENCODING = 'utf-8'
+# REDIS_PARAMS = {
+#     'host':'47.99.126.229',
+#     'port':6379,
+#     'password':'vilame',
+#     'socket_timeout': 30,
+#     'socket_connect_timeout': 30,
+#     'retry_on_timeout': True,
+#     'encoding': REDIS_ENCODING,
+# }
 
 
 
 # DEBUG_PC 将用于 DEBUG 不同的 pc 间执行的情况。
 # True:将会额外通过 pc 的 mac 标签生成一个统计key信息来统计单个PC的执行数量
-DEBUG_PC = True
+DEBUG_PC = False
 
 mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:], time.strftime("%Y%m%d-%H%M%S",time.localtime())
 DEBUG_PC_FORMAT  = 'vscrapy:stats:pc/{}:start/{}/stat/%(spider)s'.format(mac, sid)
@@ -88,7 +91,7 @@ PIPELINE_KEY             = 'vscrapy:gqueue:%(spider)s:items'
 # 该参数默认为True，默认清除的有该任务使用的过滤池，其他任务的过滤池不影响
 CLEAR_DUPEFILTER = True
 # 该参数默认为False，默认不清理该关键词，如果DEBUG_PC没有开启，该关键词直接就不会生成。
-# 主要用于个人测试，一般不需要修改该参数。
+# 主要用于个人测试，一般线上环境不需要修改该参数。
 CLEAR_DEBUG_PC = False
 
 

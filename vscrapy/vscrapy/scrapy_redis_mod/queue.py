@@ -101,6 +101,7 @@ class PriorityQueue(Base):
         # We don't use zadd method as the order of arguments change depending on
         # whether the class is Redis or StrictRedis, and the option of using
         # kwargs only accepts strings, not bytes.
+        # self.server.zadd(self.key, score, data)
         self.server.execute_command('ZADD', self.key, score, data)
 
     def pop(self, timeout=0):

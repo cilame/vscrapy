@@ -21,12 +21,6 @@ except:
 
 
 
-# 
-
-
-
-
-
 # 直接写入内容DEBUG
 os.chdir(os.path.dirname(os.getcwd())+r'\vscrapy\vscrapy')
 
@@ -42,7 +36,8 @@ with open('settings.py',encoding='utf-8') as f:
     db       = db[0]        if db else 0
 
 import redis
-r = redis.StrictRedis(host,port,db,password)
+# r = redis.StrictRedis(host,port,db,password)
+r = redis.StrictRedis()
 with open('./spiders/test_script.py',encoding='utf-8') as f:
     script = f.read()
 
