@@ -19,8 +19,8 @@ LOG_LEVEL = 'DEBUG'
 
 
 
-# 4 test
-SCHEDULER_FLUSH_ON_START = True
+# 一定不能开启就尝试清空任务管道了，不然测试脚本会由于提交任务太快导致部分任务被抛弃
+# SCHEDULER_FLUSH_ON_START = False
 
 
 
@@ -38,7 +38,7 @@ STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
 # 2/ scrapy_redis 的魔改配置
 SCHEDULER_DUPEFILTER_CLASS = "vscrapy.scrapy_redis_mod.dupefilter.RFPDupeFilter"
-SCHEDULER_QUEUE_CLASS      = "vscrapy.scrapy_redis_mod.queue.FifoQueue" #PriorityQueue
+SCHEDULER_QUEUE_CLASS      = "vscrapy.scrapy_redis_mod.queue.PriorityQueue" #PriorityQueue
 SCHEDULER                  = "vscrapy.scrapy_redis_mod.scheduler.Scheduler"
 
 ITEM_PIPELINES = {
@@ -55,16 +55,16 @@ ITEM_PIPELINES = {
 # 配置redis链接配置的一些方法
 # REDIS_HOST = '47.99.126.229'
 # REDIS_PORT = 6379
-# REDIS_ENCODING = 'utf-8'
-# REDIS_PARAMS = {
-#     'host':'47.99.126.229',
-#     'port':6379,
-#     'password':'vilame',
-#     'socket_timeout': 30,
-#     'socket_connect_timeout': 30,
-#     'retry_on_timeout': True,
-#     'encoding': REDIS_ENCODING,
-# }
+REDIS_ENCODING = 'utf-8'
+REDIS_PARAMS = {
+    'host':'47.99.126.229',
+    'port':6379,
+    'password':'vilame',
+    'socket_timeout': 30,
+    'socket_connect_timeout': 30,
+    'retry_on_timeout': True,
+    'encoding': REDIS_ENCODING,
+}
 
 
 
@@ -72,8 +72,8 @@ ITEM_PIPELINES = {
 # True:将会额外通过 pc 的 mac 标签生成一个统计key信息来统计单个PC的执行数量
 DEBUG_PC = False
 
-mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:], time.strftime("%Y%m%d-%H%M%S",time.localtime())
-DEBUG_PC_FORMAT  = 'vscrapy:stats:pc/{}:start/{}/stat/%(spider)s'.format(mac, sid)
+mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:], str(uuid.uuid4())[:5]
+DEBUG_PC_FORMAT  = 'vscrapy:stats:pc/{}:rdkey/{}/stat/%(spider)s'.format(mac, sid)
 TASK_ID_FORMAT   = 'vscrapy:stats:%(spider)s/taskid/{}/stat'
 DEPTH_MAX_FORMAT = 'taskid:{}:%(spider)s'
 

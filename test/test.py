@@ -36,13 +36,26 @@ with open('settings.py',encoding='utf-8') as f:
     db       = db[0]        if db else 0
 
 import redis
-# r = redis.StrictRedis(host,port,db,password)
-r = redis.StrictRedis()
+r = redis.StrictRedis(host,port,db,password)
+# r = redis.StrictRedis()
 with open('./spiders/test_script.py',encoding='utf-8') as f:
     script = f.read()
 
-taskid = r.incrby('vscrapy:taskidx')
-j = {'nihao':123, 'script':script, 'name': 'test', 'taskid': taskid}
-d = json.dumps(j)
-r.lpush('vscrapy:gqueue:v:start_urls', d)
-# r.lpush('vscrapy:gqueue:v:start_urls', d)
+def send_work():
+    taskid = r.incrby('vscrapy:taskidx')
+    j = {
+        'script': script, # 爬虫的scrapy脚本
+        'name': 'test',  # 爬虫的名字，用于选中scrapy脚本中的名字
+        'taskid': taskid # 任务的id，用于多任务的处理
+    }
+    d = json.dumps(j)
+    r.lpush('vscrapy:gqueue:v:start_urls', d)
+
+send_work()
+send_work()
+send_work()
+send_work()
+send_work()
+send_work()
+send_work()
+send_work()

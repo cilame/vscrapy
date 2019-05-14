@@ -23,11 +23,6 @@ class RedisStatsCollector:
         'start_time',
     )
 
-    # _local_max = 'taskid:{}:%(spider)s'
-    # mac,sid = uuid.UUID(int = uuid.getnode()).hex[-12:],time.strftime("%Y%m%d-%H%M%S",time.localtime())
-    # _spider_id_debg_format = 'vscrapy:stats:pc/{}:start/{}/stat/%(spider)s'.format(mac, sid)
-    # _spider_id_task_format = 'vscrapy:stats:%(spider)s/taskid/{}/stat'
-
     def __init__(self, crawler):
         self._spider_id_debg_format = crawler.settings.get('DEBUG_PC_FORMAT')
         self._spider_id_task_format = crawler.settings.get('TASK_ID_FORMAT')

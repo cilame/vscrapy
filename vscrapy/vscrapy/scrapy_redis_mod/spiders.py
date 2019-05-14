@@ -133,11 +133,12 @@ class RedisMixin(object):
         # 1/ 为了检查已经停止的任务并且清理任务的空间。
         # 2/ 为了获取到 start_url 进行任务的初始化并且处理任务空间的问题。
         self.limit_check = 0 # 这个参数是想让不同的任务的检查时机稍微错开一点，不要都挤在 _stop_clear 一次迭代中
-        self.limit_same  = 2
+        self.limit_same  = 2 # 日志快照连续相同的次数
         self.interval    = 5 # 多少秒执行一次 检测关闭任务
         # (理论上平均检测关闭的时间大概为 (limit_check+1) * (limit_same+1) * interval )
         # 测试时可以适量调整小一些方便查看框架的问题
         self.interval_s  = 2 # 多少秒执行一次 检测启动任务
+        self.limit_log   = 8 # 额外的配置，check stoping 限制显示任务数，防止出现几百个任务每次都要全部打印的情况。
         crawler.signals.connect(self.spider_opened, signal=signals.spider_opened)
 
 
@@ -158,11 +159,12 @@ class RedisMixin(object):
         return snapshot, enqueue, dequeue
 
     def _stop_clear(self):
-        num = 0
-        for taskid in self.spider_tids.copy():
-            num += 1
+        taskids = []
+        spider_tids_shot = self.spider_tids.copy()
+        for taskid in spider_tids_shot:
+            taskids.append(taskid)
             # 在一定时间后对统计信息的快照进行处理，如果快照相同，则计数
-            # 相似数超过N次，则代表任务已经收集不到数据了，遂停止任务
+            # 相似数超过N次，则代表任务已经收集不到数据了，遂停止任务，并写入任务停止时间
             if self.spider_tids[taskid]['check_times'] != self.limit_check:
                 self.spider_tids[taskid]['check_times'] += 1
             else:
@@ -172,11 +174,6 @@ class RedisMixin(object):
                 snapshot, enqueue, dequeue = self._get_snapshot(stat_key)
                 snapshot_e2d = enqueue == dequeue
                 snapshot_md5 = hmac.new(b'',str(snapshot).encode(),'md5').hexdigest()
-
-                # test log.
-                snapshot.update({'taskid':taskid})
-                self.logger.debug(pprint.pformat(snapshot))
-
                 if snapshot_md5 != self.spider_tids[taskid]['stat_snapshot'] or not snapshot_e2d:
                     self.spider_tids[taskid]['stat_snapshot'] = snapshot_md5
                     self.spider_tids[taskid]['same_snapshot_times'] = 0
@@ -197,15 +194,20 @@ class RedisMixin(object):
                         # 因为任务脚本会经过hash处理，以名字的hash作为redis的key进行存储
                         # 这样一个好处就是即便是存在大量重复的任务也只会存放一个任务脚本
                         del self.spider_tids[taskid]
-                        del self.spider_objs[module_name]
                         self.log_stat(taskid, 'finish_time')
                         snapshot,_,_ = self._get_snapshot(stat_key)
                         snapshot.update({'taskid':taskid})
-                        self.logger.info(pprint.pformat(snapshot))
-        if num == 0:
+                        self.logger.info('\n' + pprint.pformat(snapshot))
+                        taskids.remove(taskid)
+
+        if len(taskids) == 0:
             self.logger.info("Spider Task is Empty.")
         else:
-            self.logger.info("Check Task Stoping [check_task_number:{}].".format(num))
+            if len(taskids) > self.limit_log:
+                fmt_log = '{}'.format(taskids[:self.limit_log]).replace(']',', ...][num:{}]'.format(len(taskids)))
+            else:
+                fmt_log = '{}'.format(taskids)
+            self.logger.info("Check Task Stoping {}.".format(fmt_log))
 
     def schedule_next_requests(self):
         """Schedules a request if available"""
@@ -246,6 +248,12 @@ class RedisMixin(object):
                     taskid = data['taskid']
                     self.server.set('vscrapy:script:{}'.format(module_name), json.dumps(data))
                     self.log_stat(taskid, 'start_time')
+                    self.spider_tids[taskid] = {
+                        'check_times': 0, 
+                        'stat_snapshot': None, 
+                        'same_snapshot_times': 0,
+                        'module_name': module_name
+                    }
                 # 这里的重点就是 _plusmeta 的内容一定要是可以被序列化的数据，否则任务无法启动
                 # 所以后续的开发这里需要注意，因为后续可能会增加其他的参数进去
                 i._plusmeta = {}
@@ -260,13 +268,7 @@ class RedisMixin(object):
 
         if found:
             self.logger.debug("Read %s requests(start_requests) from new task %s.", found, taskid)
-            if taskid not in self.spider_tids:
-                self.spider_tids[taskid] = {
-                    'check_times': 0, 
-                    'stat_snapshot': None, 
-                    'same_snapshot_times': 0,
-                    'module_name': module_name
-                }
+
 
     def log_stat(self, taskid, key):
         # 由于默认的任务开启和关闭日志不是真实的任务开关闭时间
@@ -274,7 +276,6 @@ class RedisMixin(object):
         tname = self._spider_id_task_format.format(taskid) % {'spider': self.name}
         value = str(datetime.utcnow() + timedelta(hours=8)) # 使用中国时区，方便我自己使用
         self.server.hsetnx(tname, key, value)
-
 
 
     def spider_idle(self):
