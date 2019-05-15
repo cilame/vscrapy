@@ -37,10 +37,6 @@ class RedisStatsCollector:
         # 由于这个 id 的实现本身就是用来检测机器可能出现的问题
         # 一般来说需要考虑机器影响问题，所以使用 mac 地址，需要更详细的横向对比功能
 
-    # 对于每一个spiderid都生成一个唯一的spider处理stat信息
-    def _mk_unique_spider_id(self):
-        return 
-
     # 该函数没有被框架使用，属于开发者使用的接口
     def get_stats(self, spider=None):
         name = self._spider_id_debg_format % {'spider':spider.name}
@@ -60,8 +56,6 @@ class RedisStatsCollector:
                 _stat[key] = val
         return _stat
 
-
-
     # 该函数没有被框架使用，属于开发者自己用于增加功能修改的接口，可能在后续个人开发中的初始化时候可能用到
     def set_stats(self, stats, spider=None):
         for key in stats:
@@ -69,8 +63,9 @@ class RedisStatsCollector:
             self.server.hset(name, key, stats[key])
 
     # 该函数和 set_stats 函数一样使用的概率较低，而且默认的插件在一般情况下是默认不使用该函数的，这里防御性处理一下
-    # 检查了以下，貌似也就是 logstats 这个插件会用到，所以可能有点问题，
+    # 检查了一下，貌似也就是 logstats 这个插件会用到，所以可能有点问题，
     # 但是，那个插件因为目前的情况下暂时没有多大的意义放弃了（logstats：用于打印平均的爬取和item量）。
+    # 所以现在基本不会使用到这个函数
     def get_value(self, key, default=None, spider=None):
         if spider:
             name = self._spider_id_debg_format % {'spider':spider.name}
@@ -98,11 +93,8 @@ class RedisStatsCollector:
         '''
         可以在这个函数处挂钩处理，也是我这个框架的核心魔法。
         这里的函数环境向上两级就是各种日志信号的执行，这些信号空间内一般都存在request和response结构体。
-        因为一些信息可以通过request和response中的meta传递，
-        这样的话，就给了挂钩的空间，让stat能够带有一些类似任务id信息。
+        因为一些信息可以通过 request 和 response 中进行传递，这样的话，就给了挂钩的空间，
         比较方便处理多任务情况下的任务处理。
-        后续可能会将该处的处理放到其他带有 self.server 操作的函数里面
-        实现多任务的分隔处理。
         '''
         v = inspect.stack()[deep][0].f_locals
         if 'request' in v:
@@ -115,19 +107,15 @@ class RedisStatsCollector:
             taskid = 0
         return taskid
 
-    # 该框架主要使用到的两个接口就是
-    # set_value  一般用于字符串（开启和关闭的时间和关闭的原因），并且只会更新一次
-    # inc_value  一般用于数字，需要随时更新
     # 后续发现开启关闭爬虫的时间并不是任务开启的时间，所以这里的任务基本不会被用到
     # 并且，开始任务的时间将会放置在 start_requests 函数当中进行处理，
-    # 后续的关闭的时机也可能会在监听 start_urls 的管道的函数里面进行收尾处理
+    # 后续的关闭的时机也可能会在 spider 里设置轮询监听函数里进行收尾处理
     def set_value(self, key, value, spider=None):
         sname = self._spider_id_debg_format % {'spider':spider.name}
         tname = self._spider_id_task_format.format(self.get_taskid(spider)) % {'spider':spider.name}
         if type(value) == datetime: value = str(value + timedelta(hours=8)) # 将默认utc时区转到中国，方便我使用
         if self._debug_pc: self.server.hset(sname, key, value)
         self.server.hsetnx(tname, key, value)
-
 
     def inc_value(self, key, count=1, start=0, spider=None):
         if spider:

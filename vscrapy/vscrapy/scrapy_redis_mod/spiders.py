@@ -129,16 +129,16 @@ class RedisMixin(object):
         self._spider_id_debg_format = crawler.settings.get('DEBUG_PC_FORMAT')
         self._spider_id_task_format = crawler.settings.get('TASK_ID_FORMAT')
         self._spider_id_dupk_format = crawler.settings.get('SCHEDULER_DUPEFILTER_KEY')
-        # 这里是将该任务开启绑定两个不停执行的函数，
+        # 这里是将该任务开启绑定两个定时执行，永不停止的函数
         # 1/ 为了检查已经停止的任务并且清理任务的空间。
-        # 2/ 为了获取到 start_url 进行任务的初始化并且处理任务空间的问题。
+        # 2/ 为了获取到新的 start_url 开启新的任务脚本进行任务的初始化并且处理任务空间的问题。
         self.limit_check = 0 # 这个参数是想让不同的任务的检查时机稍微错开一点，不要都挤在 _stop_clear 一次迭代中
         self.limit_same  = 2 # 日志快照连续相同的次数
         self.interval    = 5 # 多少秒执行一次 检测关闭任务
         # (理论上平均检测关闭的时间大概为 (limit_check+1) * (limit_same+1) * interval )
         # 测试时可以适量调整小一些方便查看框架的问题
         self.interval_s  = 2 # 多少秒执行一次 检测启动任务
-        self.limit_log   = 8 # 额外的配置，check stoping 限制显示任务数，防止出现几百个任务每次都要全部打印的情况。
+        self.limit_log   = 8 # 额外的配置，check stoping 限制显示任务数，防止出现如有几百个任务每次都要全部打印的情况。
         crawler.signals.connect(self.spider_opened, signal=signals.spider_opened)
 
 
@@ -164,7 +164,7 @@ class RedisMixin(object):
         for taskid in spider_tids_shot:
             taskids.append(taskid)
             # 在一定时间后对统计信息的快照进行处理，如果快照相同，则计数
-            # 相似数超过N次，则代表任务已经收集不到数据了，遂停止任务，并写入任务停止时间
+            # 相似数超过N次，则代表任务已经收集不到数据了，遂停止任务，并写入任务停止时间，（设置的时间越长越准，十分钟内差不多了）
             if self.spider_tids[taskid]['check_times'] != self.limit_check:
                 self.spider_tids[taskid]['check_times'] += 1
             else:
@@ -182,7 +182,7 @@ class RedisMixin(object):
                     if self.spider_tids[taskid]['same_snapshot_times'] >= self.limit_same:
                         # 这里主要就是直接对任务结束进行收尾处理
                         # 后续需要各种删除 redis 中各种不需要的 key 来清理空间
-                        # 另外再清理
+                        # 另外再清理程序启动时生成的检测停止标签
                         if self._clear_debug_pc:
                             stat_pckey = self._spider_id_debg_format % {'spider': self.name}
                             self.server.delete(stat_pckey)
@@ -190,9 +190,15 @@ class RedisMixin(object):
                             dupefilter = self._spider_id_dupk_format.format(taskid) % {'spider': self.name}
                             self.server.delete(dupefilter)
                         module_name = self.spider_tids[taskid]['module_name']
-                        # 唯一在redis里面必须常驻的就是任务脚本
-                        # 因为任务脚本会经过hash处理，以名字的hash作为redis的key进行存储
+                        # 在 redis 里面必须常驻的就是任务脚本
+                        # 因为任务脚本会经过 hash 处理，以名字的 hash 作为 redis 的 key 进行存储
                         # 这样一个好处就是即便是存在大量重复的任务也只会存放一个任务脚本
+                        # 同时 spider 对象也用的是脚本的 hash 作为 key 存放在执行程序的一个字典里面
+                        # 为了考虑重复任务的可能，在任务结束时，删除对象[可能别人任务也在用]的风险和开发难度很大，
+                        # 实际上这种对象资源的消耗本身也比较小，所以对象也考虑常驻内存，
+                        # 并且程序重启后，如果没有遇到需要用到之前任务的脚本也不会主动去实例化。节省开支。
+                        # 另外还有一种恶性情况，就是还没有检查到任务停止的时候程序就意外关闭了
+                        # 可能的影响：没有清理过滤池、没有写入finish_time、少数几条正在执行的任务丢失
                         del self.spider_tids[taskid]
                         self.log_stat(taskid, 'finish_time')
                         snapshot,_,_ = self._get_snapshot(stat_key)
@@ -240,6 +246,9 @@ class RedisMixin(object):
             # 1/ 'taskid'  # 任务id
             # 2/ 'name'    # 爬虫的名字
             # 3/ 'script'  # 脚本字符串
+
+            # 这里暂时还没有处理异常情况，是因为异常信息的处理这时还没有决定
+            # 不过比较符合心理预期的很可能是挂钩所有日志一并传入带 taskid 分配处理的管道
             module_name = save_script_as_a_module_file(data['script'])
             spider_obj  = load_spider_from_module(data['name'], module_name)
             taskid      = None

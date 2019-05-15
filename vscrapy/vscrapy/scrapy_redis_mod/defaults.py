@@ -11,8 +11,6 @@ REDIS_PARAMS = {
     'encoding': REDIS_ENCODING,
 }
 
-
-mac = uuid.UUID(int = uuid.getnode()).hex[-12:]
 '''
 后面根据需要魔改下面的关于 redis 队列配置相关的部分，
 让其能够接收 spiderid 以及 taskid 的标识，并且不要将需要的配置在此处，
@@ -37,7 +35,6 @@ CLEAR_DEBUG_PC = False
 SCHEDULER_DUPEFILTER_CLASS = "v.scrapy_redis_mod.dupefilter.RFPDupeFilter"
 SCHEDULER_QUEUE_CLASS      = "v.scrapy_redis_mod.queue.PriorityQueue"
 SCHEDULER                  = "v.scrapy_redis_mod.scheduler.Scheduler"
-
 
 ITEM_PIPELINES = {
     'v.pipelines.VPipeline':                      300,

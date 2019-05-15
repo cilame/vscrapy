@@ -19,8 +19,6 @@ except:
     # time.sleep(1)
     os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
 
-
-
 # 直接写入内容DEBUG
 os.chdir(os.path.dirname(os.getcwd())+r'\vscrapy\vscrapy')
 
@@ -51,11 +49,4 @@ def send_work():
     d = json.dumps(j)
     r.lpush('vscrapy:gqueue:v:start_urls', d)
 
-send_work()
-send_work()
-send_work()
-send_work()
-send_work()
-send_work()
-send_work()
 send_work()
