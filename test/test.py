@@ -2,6 +2,10 @@ import os
 import time
 import json
 import re
+import redis
+
+with open('./test_script.py',encoding='utf-8') as f:
+    script = f.read()
 
 LEVEL = 'DEBUG'
 
@@ -33,11 +37,8 @@ with open('settings.py',encoding='utf-8') as f:
     password = password[0]  if password else None
     db       = db[0]        if db else 0
 
-import redis
 r = redis.StrictRedis(host,port,db,password)
 # r = redis.StrictRedis()
-with open('./spiders/test_script.py',encoding='utf-8') as f:
-    script = f.read()
 
 def send_work():
     taskid = r.incrby('vscrapy:taskidx')
