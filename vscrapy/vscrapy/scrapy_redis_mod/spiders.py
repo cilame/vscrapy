@@ -194,16 +194,16 @@ class RedisMixin(object):
                         # 因为任务脚本会经过 hash 处理，以名字的 hash 作为 redis 的 key 进行存储
                         # 这样一个好处就是即便是存在大量重复的任务也只会存放一个任务脚本
                         # 同时 spider 对象也用的是脚本的 hash 作为 key 存放在执行程序的一个字典里面
-                        # 为了考虑重复任务的可能，在任务结束时，删除对象[可能别人任务也在用]的风险和开发难度很大，
+                        # 为了考虑重复任务的可能，在任务结束时，删除[可能别的任务也在用的]对象的风险和开发难度很大，
                         # 实际上这种对象资源的消耗本身也比较小，所以对象也考虑常驻内存，
                         # 并且程序重启后，如果没有遇到需要用到之前任务的脚本也不会主动去实例化。节省开支。
                         # 另外还有一种恶性情况，就是还没有检查到任务停止的时候程序就意外关闭了
-                        # 可能的影响：没有清理过滤池、没有写入finish_time、少数几条正在执行的任务丢失
+                        # 可能的影响：没有清理过滤池、没有写入finish_time、少数几条正在执行的任务丢失，
+                        # 对其他正在执行的任务影响基本没有。所以不考虑了。
                         del self.spider_tids[taskid]
                         self.log_stat(taskid, 'finish_time')
                         snapshot,_,_ = self._get_snapshot(stat_key)
-                        snapshot.update({'taskid':taskid})
-                        self.logger.info('\n' + pprint.pformat(snapshot))
+                        self.logger.info('Task {} is Stoped.\n'.format(taskid) + pprint.pformat(snapshot))
                         taskids.remove(taskid)
 
         if len(taskids) == 0:

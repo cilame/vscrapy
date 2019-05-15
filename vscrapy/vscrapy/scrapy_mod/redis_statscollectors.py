@@ -94,7 +94,7 @@ class RedisStatsCollector:
         可以在这个函数处挂钩处理，也是我这个框架的核心魔法。
         这里的函数环境向上两级就是各种日志信号的执行，这些信号空间内一般都存在request和response结构体。
         因为一些信息可以通过 request 和 response 中进行传递，这样的话，就给了挂钩的空间，
-        比较方便处理多任务情况下的任务处理。
+        比较方便处理多任务情况下的任务统计处理。
         '''
         v = inspect.stack()[deep][0].f_locals
         if 'request' in v:

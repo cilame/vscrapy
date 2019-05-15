@@ -5,6 +5,7 @@ from vscrapy.scrapy_redis_mod.spiders import (
 )
 
 import json
+import traceback
 from scrapy import Request
 
 class VSpider(RedisSpider):
@@ -13,6 +14,7 @@ class VSpider(RedisSpider):
 
     def parse(self, response):
 
+        taskid      = response._plusmeta.get('taskid')
         spider_name = response._plusmeta.get('spider_name')
         module_name = response._plusmeta.get('module_name')
         __callerr__ = response._plusmeta.get('__callerr__')
@@ -40,13 +42,24 @@ class VSpider(RedisSpider):
                         yield r
                     else:
                         # 这里大概就是 item对象或者是字典
-                        yield r
+                        yield self._parse_item(r, taskid)
             elif isinstance(parsedata, (Request,)):
                 r = parsedata
                 r._plusmeta = response._plusmeta
                 yield r
             else:
                 # 这里大概就是 item对象或者是字典
-                yield parsedata
+                yield self._parse_item(parsedata, taskid)
 
+    def _parse_item(self, item, taskid):
+        # 后续发现item对象并不支持动态增加字段
+        # 导致后续的处理并不是那么好，所以现在这里稍微将数据类型统一一下，方便增加taskid字段
         # 后面可以考虑在这里对item的输出进行挂钩，让输出数据能带有一些额外的信息
+        if item:
+            try:
+                ret = dict(item)
+                if 'taskid' not in ret:
+                    ret['taskid'] = taskid
+                return ret
+            except:
+                return TypeError(traceback.format_exc())

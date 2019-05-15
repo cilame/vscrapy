@@ -63,7 +63,7 @@ class RedisPipeline(object):
     def _process_item(self, item, spider):
         key = self.item_key(item, spider)
         data = self.serialize(item)
-        self.server.rpush(key, data)
+        self.server.lpush(key, data)
         return item
 
     def item_key(self, item, spider):
@@ -74,13 +74,5 @@ class RedisPipeline(object):
 
         """
 
-
-
-
-        # 这里需要增加spiderid和taskid的标识，让数据存储到正确的地方
-
-
-
-
-        
-        return self.key % {'spider': spider.name}
+        # 将数据管道绑定taskid，对数据进行分管道存储，方便后续取出数据
+        return self.key.format(item.get('taskid')) % {'spider': spider.name}

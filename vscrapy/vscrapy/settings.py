@@ -14,8 +14,9 @@ LOG_LEVEL = 'DEBUG'
 
 # 1/ scrapy 的魔改处理
 EXTENSIONS = {
-    'scrapy.extensions.logstats.LogStats':   None, # 关闭这个日志输出，因为无法获取当前任务id，遂放弃
-    'scrapy.extensions.corestats.CoreStats': None, # 关闭这个日志处理，使用魔改的日志处理
+    'scrapy.extensions.telnet.TelnetConsole': None, # 关闭这个插件，我不用
+    'scrapy.extensions.logstats.LogStats':   None,  # 关闭这个日志输出，因为无法获取当前任务id，遂放弃
+    'scrapy.extensions.corestats.CoreStats': None,  # 关闭这个日志处理，使用魔改的日志处理
     'vscrapy.scrapy_mod.redis_corestats.RedisCoreStats': True,
 }
 STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
@@ -32,6 +33,8 @@ SPIDER_MIDDLEWARES = {
 }
 DOWNLOADER_MIDDLEWARES = { 
     'vscrapy.middlewares.VDownloaderMiddleware': 0, 
+    'scrapy.downloadermiddlewares.retry.RetryMiddleware': None, # 取消原版retry
+    'vscrapy.scrapy_mod._retry.RetryMiddleware': 550, # 原版retry会将request重置成没有 _plusmeta 的对象所以需要魔改
 }
 ITEM_PIPELINES = {
     'vscrapy.pipelines.VscrapyPipeline':                300, # 后续需要考虑数据存储的插件部分
@@ -76,7 +79,7 @@ DEPTH_MAX_FORMAT = 'taskid:{}:%(spider)s'
 SCHEDULER_QUEUE_KEY      = 'vscrapy:gqueue:%(spider)s/requests'
 SCHEDULER_DUPEFILTER_KEY = 'vscrapy:gqueue:%(spider)s/taskid/{}/dupefilter'
 START_URLS_KEY           = 'vscrapy:gqueue:%(name)s:start_urls'
-PIPELINE_KEY             = 'vscrapy:gqueue:%(spider)s:items'
+REDIS_ITEMS_KEY          = 'vscrapy:gqueue:%(spider)s/taskid/{}/items'
 
 # 在任务执行结束的时候
 # 将部分的的redis key删除，清空内容，节省空间

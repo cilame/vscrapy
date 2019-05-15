@@ -51,3 +51,4 @@ def send_work():
     r.lpush('vscrapy:gqueue:v:start_urls', d)
 
 send_work()
+send_work()
