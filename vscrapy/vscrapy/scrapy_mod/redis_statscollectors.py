@@ -164,7 +164,5 @@ class RedisStatsCollector:
         pass
 
     def close_spider(self, spider, reason):
-        if self._dump:
-            logger.info("Dumping Scrapy stats:\n" + pprint.pformat(self.get_stats(spider)),
-                        extra={'spider': spider})
+        pass
 
