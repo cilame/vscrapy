@@ -8,7 +8,7 @@ import traceback
 import importlib
 from pprint import pprint, pformat
 
-import vscrapy
+__version__ = '0.0.3'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
@@ -28,7 +28,7 @@ General Options
   -ho,--host     ::redis host.     default: localhost
   -po,--port     ::redis port.     default: 6379
   -pa,--password ::redis password. default: None (means no password)
-  -db,--db       ::redis db.       default: 0'''.format(vscrapy.__version__)
+  -db,--db       ::redis db.       default: 0'''.format(__version__)
 
 
 
@@ -118,7 +118,7 @@ def cmdline_run(args):
     
 
 def cmdline_stat(args):
-    from vscrapy.scrapy_redis_mod import connection
+    from .vscrapy.scrapy_redis_mod import connection
     settings, _conf = _get_settings_and_conf(args)
     settings['REDIS_PARAMS'].update(_conf)
     server = connection.get_redis(**settings['REDIS_PARAMS'])
@@ -183,7 +183,7 @@ You need to choose one of the three ways to use stat cmdline.'''
 
 
 def cmdline_crawl(args):
-    from vscrapy.scrapy_redis_mod import connection
+    from .vscrapy.scrapy_redis_mod import connection
     from scrapy.utils.project import get_project_settings
     from scrapy.spiderloader import SpiderLoader
     settings = get_project_settings()
