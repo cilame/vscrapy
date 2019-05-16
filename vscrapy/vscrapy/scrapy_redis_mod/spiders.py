@@ -16,17 +16,13 @@ import importlib
 import traceback
 from datetime import datetime, timedelta
 
-def mk_work_home(path='.vscrapy_temp'):
+def mk_work_home(path='.vscrapy'):
     home = os.environ.get('HOME')
     home = home if home else os.environ.get('HOMEDRIVE') + os.environ.get('HOMEPATH')
     path = os.path.join(home, path)
     if not os.path.isdir(path): os.makedirs(path)
     if path not in sys.path: sys.path.append(path)
     return path
-
-# 创建脚本存放环境空间
-mk_work_home()
-
 
 def save_script_as_a_module_file(script):
     try:
@@ -223,7 +219,8 @@ class RedisMixin(object):
 
 
     # 下面的部分主要是处理 start_url 的部分，这里的处理是永久打开直至程序关闭的
-    # 所以可以将此处魔改成对传递过来的参数各种初始化的地方，在发送端生成id后传入这边进行处理
+    # 原本 scrapy-redis 是用这个来接收一个起始 url 字符串，不过现在改成了接收一个json数据传递脚本数据
+    # 将此处魔改成对传递过来的参数各种初始化的地方，在发送端生成id后传入这边进行处理
     # 这里可以传过来一个简单的 json 数据来装脚本的代码部分，方便脚本的传递以及实例化
     def next_requests(self):
         """Returns a request to be scheduled or none."""
@@ -243,7 +240,7 @@ class RedisMixin(object):
             # 这里需要生成最初的请求,基本上就是需要通过传过来的data进行最初的脚本运行
             # 通过生成对象来调配该对象的 start_requests 函数来生成最开始的请求
             # 需要传递的最初的json结构需要包含三个关键字参数
-            # 1/ 'taskid'  # 任务id
+            # 1/ 'taskid'  # 任务id # 这个由任务发送端自动生成。
             # 2/ 'name'    # 爬虫的名字
             # 3/ 'script'  # 脚本字符串
 

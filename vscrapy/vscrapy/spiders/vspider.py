@@ -55,11 +55,15 @@ class VSpider(RedisSpider):
         # 后续发现item对象并不支持动态增加字段
         # 导致后续的处理并不是那么好，所以现在这里稍微将数据类型统一一下，方便增加taskid字段
         # 后面可以考虑在这里对item的输出进行挂钩，让输出数据能带有一些额外的信息
+        # 这里使用了 b2b89079b2f7befcf4691a98a3f0a2a2 这个key 是一个固定值，因为传递存储的时候
+        # taskid 主要是负责分配指定的管道进行存放，所以存储的时候可以 pop 掉节省空间。
+        # 后续获取数据直接用发送任务时生成的 taskid 到指定管道取就行了。
+        # （这个key的生成函数 import os,hmac;hmac.new(b'',os.urandom(32),'md5').hexdigest()，由开发者生成固定值）
+        # （就是为了不会与其他用户的 item 里面的[可能设置的taskid作为] key 碰撞造成影响）
         if item:
             try:
                 ret = dict(item)
-                if 'taskid' not in ret:
-                    ret['taskid'] = taskid
+                ret['b2b89079b2f7befcf4691a98a3f0a2a2'] = taskid
                 return ret
             except:
                 return TypeError(traceback.format_exc())

@@ -83,7 +83,7 @@ class VDownloaderMiddleware(object):
 
     # 主要的魔改函数就是这里，要非常非常的注意
     # 这里是将下载后的 response 绑定 _plusmeta 这个属性
-    # 因为需要通过这个属性来将代码进行向下传递
+    # 因为需要通过这个属性来将 taskid 一类的属性进行向下传递
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
 

@@ -33,19 +33,21 @@ SPIDER_MIDDLEWARES = {
 }
 DOWNLOADER_MIDDLEWARES = { 
     'vscrapy.middlewares.VDownloaderMiddleware': 0, 
-    'scrapy.downloadermiddlewares.retry.RetryMiddleware': None, # 取消原版retry
+    'scrapy.downloadermiddlewares.retry.RetryMiddleware': None, # 取消原版retry，使用魔改版
     'vscrapy.scrapy_mod._retry.RetryMiddleware': 550, # 原版retry会将request重置成没有 _plusmeta 的对象所以需要魔改
 }
 ITEM_PIPELINES = {
-    'vscrapy.pipelines.VscrapyPipeline':                300, # 后续需要考虑数据存储的插件部分
-    'vscrapy.scrapy_redis_mod.pipelines.RedisPipeline': 400,
+    'vscrapy.pipelines.VscrapyPipeline':                300, # 后续需要考虑数据其他存储方式的插件部分
+    'vscrapy.scrapy_redis_mod.pipelines.RedisPipeline': 999,
+    # 使用了 b2b89079b2f7befcf4691a98a3f0a2a2 作为item的taskid传递时的key，
+    # 后续在存入管道时删除，防止与用户可能使用taskid作为key冲突。
 }
 
 # 至少需要魔改四个 scrapy_redis 源码中的四个文件，目的是要让这几个任务都能识别到任务id
 # 1/ dupefilter # 这里稍微修改了一下 request_seen 函数绑定 taskid 的处理
 # 2/ queue      # 后续发现这里无需处理 taskid，实际处理为挂钩更深的 _reqser 中的请求序列化的函数
 # 3/ scheduler  # 后续发现这里也无需处理 taskid，将绑定 taskid 的任务交给 Spider parse 以及各种中间件即可。
-# 4/ pipelines  # 暂时还没有处理
+# 4/ pipelines  # 使用了taskid传递方式，让后续管道能知道要想哪个数据收集管道传入数据
 
 # 配置redis链接配置的一些方法
 # REDIS_HOST = '47.99.126.229'

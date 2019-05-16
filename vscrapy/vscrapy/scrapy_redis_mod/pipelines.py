@@ -61,10 +61,13 @@ class RedisPipeline(object):
         return deferToThread(self._process_item, item, spider)
 
     def _process_item(self, item, spider):
-        key = self.item_key(item, spider)
-        data = self.serialize(item)
-        self.server.lpush(key, data)
-        return item
+        # 若是不想存入redis的管道，直接在前面的管道删除掉 b2b89079b2f7befcf4691a98a3f0a2a2 key 即可
+        _item = item.copy()
+        if _item.pop('b2b89079b2f7befcf4691a98a3f0a2a2'):
+            key = self.item_key(item, spider)
+            data = self.serialize(_item)
+            self.server.lpush(key, data)
+            return item
 
     def item_key(self, item, spider):
         """Returns redis key based on given spider.
@@ -73,6 +76,6 @@ class RedisPipeline(object):
         and/or spider.
 
         """
-
-        # 将数据管道绑定taskid，对数据进行分管道存储，方便后续取出数据
-        return self.key.format(item.get('taskid')) % {'spider': spider.name}
+        # 将数据管道绑定taskid，对数据进行分管道存储，方便后续取出数据，之所以不用 taskid 作为key
+        # 而使用 b2b89079b2f7befcf4691a98a3f0a2a2 这个key是保证不与用户的可能会设置 taskid 作为key 冲突。
+        return self.key.format(item.get('b2b89079b2f7befcf4691a98a3f0a2a2')) % {'spider': spider.name}
