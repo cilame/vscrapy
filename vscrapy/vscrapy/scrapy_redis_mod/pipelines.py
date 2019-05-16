@@ -63,7 +63,7 @@ class RedisPipeline(object):
     def _process_item(self, item, spider):
         # 若是不想存入redis的管道，直接在前面的管道删除掉 b2b89079b2f7befcf4691a98a3f0a2a2 key 即可
         _item = item.copy()
-        if _item.pop('b2b89079b2f7befcf4691a98a3f0a2a2'):
+        if _item.pop('b2b89079b2f7befcf4691a98a3f0a2a2', None):
             key = self.item_key(item, spider)
             data = self.serialize(_item)
             self.server.lpush(key, data)
