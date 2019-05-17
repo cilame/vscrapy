@@ -15,6 +15,7 @@ LOG_LEVEL = 'DEBUG'
 # 1/ scrapy 的魔改处理
 EXTENSIONS = {
     'scrapy.extensions.telnet.TelnetConsole': None, # 关闭这个插件，我不用
+    'scrapy.extensions.memusage.MemoryUsage': None, # 同样的理由，我不用
     'scrapy.extensions.logstats.LogStats':   None,  # 关闭这个日志输出，因为无法获取当前任务id，遂放弃
     'scrapy.extensions.corestats.CoreStats': None,  # 关闭这个日志处理，使用魔改的日志处理
     'vscrapy.vscrapy.scrapy_mod.redis_corestats.RedisCoreStats': True,

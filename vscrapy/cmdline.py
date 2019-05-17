@@ -10,7 +10,7 @@ from pprint import pprint, pformat
 
 from vscrapy.vscrapy.scrapy_redis_mod import connection
 
-__version__ = '1.0.0'
+__version__ = '1.0.1'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
