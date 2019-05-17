@@ -1,9 +1,11 @@
 from setuptools import setup, find_packages  
 import sys
-  
+
+from vscrapy import cmdline
+
 setup(  
     name="vscrapy",
-    version='0.0.2',
+    version=cmdline.__version__,
     author="cilame",
     author_email="opaquism@hotmail.com",
     description="multi task scrapy redis.",
