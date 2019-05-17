@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 logger = logging.getLogger(__name__)
 
 from scrapy.statscollectors import StatsCollector
-from vscrapy.scrapy_redis_mod.connection import from_settings
+from vscrapy.vscrapy.scrapy_redis_mod.connection import from_settings
 
 import inspect
 

@@ -11,17 +11,17 @@ LEVEL = 'DEBUG'
 
 try:
     os.chdir('../vscrapy')
-    os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
+    os.system('start powershell -NoExit vscrapy run')
     # time.sleep(1)
-    os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
+    os.system('start powershell -NoExit vscrapy run')
     # time.sleep(1)
-    os.system('start powershell -NoExit scrapy crawl v -L {}'.format(LEVEL))
+    os.system('start powershell -NoExit vscrapy run')
 except:
-    os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
+    os.system('start cmd /k scrapy vscrapy run')
     # time.sleep(1)
-    os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
+    os.system('start cmd /k scrapy vscrapy run')
     # time.sleep(1)
-    os.system('start cmd /k scrapy crawl v -L {}'.format(LEVEL))
+    os.system('start cmd /k scrapy vscrapy run')
 
 # 直接写入内容DEBUG
 os.chdir(os.path.dirname(os.getcwd())+r'\vscrapy\vscrapy')

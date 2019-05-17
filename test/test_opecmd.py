@@ -1,10 +1,8 @@
 import os
 import sys
 
-path = os.path.dirname(os.getcwd())+r'\vscrapy'
-print(path)
-
-cmd = 'python3 {}'.format(path)
+path = os.getcwd()
+cmd = 'python3 {}'.format(os.path.join(path, 'test_cmdline.py'))
 
 try:
     os.system('start powershell -NoExit')

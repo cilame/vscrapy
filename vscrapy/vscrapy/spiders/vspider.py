@@ -1,4 +1,4 @@
-from vscrapy.scrapy_redis_mod.spiders import (
+from vscrapy.vscrapy.scrapy_redis_mod.spiders import (
     RedisSpider,
     load_spider_from_module,
     save_script_as_a_module_file,

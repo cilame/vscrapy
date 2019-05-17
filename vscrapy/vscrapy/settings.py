@@ -5,8 +5,8 @@
 #
 #     http://doc.scrapy.org/topics/settings.html
 #
-SPIDER_MODULES = ['vscrapy.spiders']
-NEWSPIDER_MODULE = 'vscrapy.spiders'
+SPIDER_MODULES = ['vscrapy.vscrapy.spiders']
+NEWSPIDER_MODULE = 'vscrapy.vscrapy.spiders'
 LOG_LEVEL = 'DEBUG'
 
 # 一定不能开启就尝试清空任务管道了，不然测试脚本会由于提交任务太快导致部分任务被抛弃
@@ -17,28 +17,28 @@ EXTENSIONS = {
     'scrapy.extensions.telnet.TelnetConsole': None, # 关闭这个插件，我不用
     'scrapy.extensions.logstats.LogStats':   None,  # 关闭这个日志输出，因为无法获取当前任务id，遂放弃
     'scrapy.extensions.corestats.CoreStats': None,  # 关闭这个日志处理，使用魔改的日志处理
-    'vscrapy.scrapy_mod.redis_corestats.RedisCoreStats': True,
+    'vscrapy.vscrapy.scrapy_mod.redis_corestats.RedisCoreStats': True,
 }
-STATS_CLASS = 'vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
+STATS_CLASS = 'vscrapy.vscrapy.scrapy_mod.redis_statscollectors.RedisStatsCollector'
 
 # 2/ scrapy_redis 的魔改配置
-SCHEDULER_DUPEFILTER_CLASS = "vscrapy.scrapy_redis_mod.dupefilter.RFPDupeFilter"
-SCHEDULER_QUEUE_CLASS      = "vscrapy.scrapy_redis_mod.queue.PriorityQueue" #PriorityQueue
-SCHEDULER                  = "vscrapy.scrapy_redis_mod.scheduler.Scheduler"
+SCHEDULER_DUPEFILTER_CLASS = "vscrapy.vscrapy.scrapy_redis_mod.dupefilter.RFPDupeFilter"
+SCHEDULER_QUEUE_CLASS      = "vscrapy.vscrapy.scrapy_redis_mod.queue.PriorityQueue" #PriorityQueue
+SCHEDULER                  = "vscrapy.vscrapy.scrapy_redis_mod.scheduler.Scheduler"
 
 # 必要的中间件，主要是 VDownloaderMiddleware 这个中间件
 # VSpiderMiddleware 暂时还没有使用到，因为这里没有挂钩就已经运行很好了。
 SPIDER_MIDDLEWARES = {
-    'vscrapy.middlewares.VSpiderMiddleware': 0,
+    'vscrapy.vscrapy.middlewares.VSpiderMiddleware': 0,
 }
 DOWNLOADER_MIDDLEWARES = { 
-    'vscrapy.middlewares.VDownloaderMiddleware': 0, 
+    'vscrapy.vscrapy.middlewares.VDownloaderMiddleware': 0, 
     'scrapy.downloadermiddlewares.retry.RetryMiddleware': None, # 取消原版retry，使用魔改版
-    'vscrapy.scrapy_mod._retry.RetryMiddleware': 550, # 原版retry会将request重置成没有 _plusmeta 的对象所以需要魔改
+    'vscrapy.vscrapy.scrapy_mod._retry.RetryMiddleware': 550, # 原版retry会将request重置成没有 _plusmeta 的对象所以需要魔改
 }
 ITEM_PIPELINES = {
-    'vscrapy.pipelines.VscrapyPipeline':                300, # 后续需要考虑数据其他存储方式的插件部分
-    'vscrapy.scrapy_redis_mod.pipelines.RedisPipeline': 999,
+    'vscrapy.vscrapy.pipelines.VscrapyPipeline':                300, # 后续需要考虑数据其他存储方式的插件部分
+    'vscrapy.vscrapy.scrapy_redis_mod.pipelines.RedisPipeline': 999,
     # 使用了 b2b89079b2f7befcf4691a98a3f0a2a2 作为item的taskid传递时的key，
     # 后续在存入管道时删除，防止与用户可能使用taskid作为key冲突。
 }

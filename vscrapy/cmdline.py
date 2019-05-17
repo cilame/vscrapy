@@ -8,6 +8,8 @@ import traceback
 import importlib
 from pprint import pprint, pformat
 
+from vscrapy.vscrapy.scrapy_redis_mod import connection
+
 __version__ = '0.0.3'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
@@ -118,7 +120,6 @@ def cmdline_run(args):
     
 
 def cmdline_stat(args):
-    from .vscrapy.scrapy_redis_mod import connection
     settings, _conf = _get_settings_and_conf(args)
     settings['REDIS_PARAMS'].update(_conf)
     server = connection.get_redis(**settings['REDIS_PARAMS'])
@@ -160,7 +161,7 @@ You need to choose one of the three ways to use stat cmdline.'''
         d = {}
         for k,v in server.hgetall(name).items():
             k,v = k.decode(enco), v.decode(enco)
-            k = '_'+k+'_' if k == 'start_time' else k
+            k = '__'+k if k == 'start_time' else k
             k = '_'+k if k == 'finish_time' else k
             try:
                 d[k] = int(v)
@@ -183,7 +184,6 @@ You need to choose one of the three ways to use stat cmdline.'''
 
 
 def cmdline_crawl(args):
-    from .vscrapy.scrapy_redis_mod import connection
     from scrapy.utils.project import get_project_settings
     from scrapy.spiderloader import SpiderLoader
     settings = get_project_settings()
@@ -191,7 +191,7 @@ def cmdline_crawl(args):
     if not args:
         spiderlist = spiders.list()
         if spiderlist:
-            print('spiders list {}'.format())
+            print('spiders list {}'.format(spiderlist))
         exit()
     spidername = args.spider
     filepath = inspect.getabsfile(spiders.load(spidername))
@@ -275,13 +275,11 @@ def execute(argv=None):
         print(description)
         exit()
 
-    args = parse.parse_args()
+    args = parse.parse_args(argv[1:])
     if   args.command == 'run':     cmdline_run(args)
     elif args.command == 'stat':    cmdline_stat(args)
     elif args.command == 'config':  cmdline_config(args)
     elif args.command == 'crawl':   cmdline_crawl(args)
-    
-    # else: test_deal(args)
 
 if __name__ == '__main__':
     execute()
