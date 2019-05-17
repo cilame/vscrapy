@@ -66,7 +66,7 @@ class RedisPipeline(object):
         if _item.pop('b2b89079b2f7befcf4691a98a3f0a2a2', None):
             key = self.item_key(item, spider)
             data = self.serialize(_item)
-            self.server.lpushx(key, data)
+            self.server.lpush(key, data)
             return item
 
     def item_key(self, item, spider):
