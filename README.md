@@ -140,7 +140,7 @@ spiders list ['baidukey']
 
 ```bash
 PS C:\Users\Administrator\Desktop\baidu> vscrapy crawl baidukey
-send taks:
+send task:
 {
     "taskid": 7,
     "name": "baidukey"
@@ -194,4 +194,4 @@ PS C:\Users\Administrator\Desktop\baidu> vscrapy stat -la
 ```
 
 #### 补充
-- 目前该工具 README 的版本尚在 vscrapy 的 1.0.1 版本。里面的功能暂时还没有考虑更好的处理收集数据的方式。目前收集的数据都放在 redis 当中以 taskid 进行分管道存储，可以再 gqueue 管道下的 items 处看到。不过将数据持久放入 redis 是一个非常不好的选择，后续会再考虑更好的存储数据的方式。或许通过 redis 作为一个数据存储的中转站也未尝不可。
+- 目前该工具 README 的版本尚在 vscrapy 的 1.0.1 版本。里面的功能暂时还没有考虑更好的处理收集数据的方式。目前收集的数据都放在 redis 当中以 taskid 进行分管道存储，可以在 gqueue 管道下的 items 处看到。不过将数据持久放入 redis 是一个非常不好的选择，后续会再考虑更好的存储数据的方式。或许通过 redis 作为一个数据存储的中转站也未尝不可。

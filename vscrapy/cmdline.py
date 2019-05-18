@@ -10,7 +10,7 @@ from pprint import pprint, pformat
 
 from vscrapy.vscrapy.scrapy_redis_mod import connection
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
@@ -212,7 +212,7 @@ def cmdline_crawl(args):
         return jsondata
     jsondata = send_script_start_work(spidername, script)
     jsondata.pop('script')
-    print('send taks:')
+    print('send task:')
     print(json.dumps(jsondata,indent=4))
 
 
