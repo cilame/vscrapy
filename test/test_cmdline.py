@@ -2,7 +2,7 @@ import os
 import sys
 
 path = os.path.dirname(os.getcwd())
-os.chdir(path)
+sys.path.append(path)
 
 from vscrapy.cmdline import execute
 
