@@ -10,7 +10,7 @@ from pprint import pprint, pformat
 
 from vscrapy.vscrapy.scrapy_redis_mod import connection
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
@@ -58,7 +58,7 @@ def _mk_config_path(folder='.vscrapy',filename='.vscrapy'):
     except:
         traceback.print_exc()
         print('unlocal homepath.')
-        exit(0)
+        sys.exit()
 
 def cmdline_config(args):
     confpath, _conf, _o_conf = _mk_config_path()
@@ -148,10 +148,10 @@ You need to choose one of the three ways to use stat cmdline.'''
     ls = list(filter(None,(taskid,latest,_list_)))
     if len(ls) == 0:
         print(loginfo)
-        exit()
+        sys.exit()
     if len(ls) != 1:
         print("[ERROR]:\nYou shouldn't use multiple instructions. \nSub command must use one of -ta/-la/-ls.")
-        exit()
+        sys.exit()
     for k,v in zip((taskid,latest,_list_),('taskid','latest','list')):
         if k: break
 
@@ -192,7 +192,7 @@ def cmdline_crawl(args):
         spiderlist = spiders.list()
         if spiderlist:
             print('spiders list {}'.format(spiderlist))
-        exit()
+        sys.exit()
     spidername = args.spider
     filepath = inspect.getabsfile(spiders.load(spidername))
     os.environ.pop('SCRAPY_SETTINGS_MODULE')
@@ -273,7 +273,7 @@ def execute(argv=None):
     
     if len(argv) == 1:
         print(description)
-        exit()
+        sys.exit()
 
     args = parse.parse_args(argv[1:])
     if   args.command == 'run':     cmdline_run(args)
