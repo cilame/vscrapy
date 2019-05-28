@@ -40,3 +40,6 @@ ITEM_PIPELINES = {
     'v.pipelines.VPipeline':                      300,
     'v.scrapy_redis_mod.pipelines.RedisPipeline': 400,
 }
+
+# 默认的mysql driver导入库配置，如果全部的函数库都没有下载，那么mysql写入中间件将不会使用。
+MYSQL_DRIVERS = ["MySQLdb", "pymysql","mysql.connector"]

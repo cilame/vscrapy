@@ -91,3 +91,9 @@ CLEAR_DUPEFILTER = True
 # 该参数默认为False，默认不清理该关键词，如果DEBUG_PC没有开启，该关键词直接就不会生成。
 # 主要用于个人测试，一般线上环境不需要修改该参数。
 CLEAR_DEBUG_PC = False
+
+
+
+# 配置mysql driver
+MYSQL_DRIVERS = ["MySQLdb", "pymysql","mysql.connector"]
+MYSQL_PREFER_DRIVER = None # 优先使用的 mysql driver，没有配置则按照上面配置的优先级使用配置

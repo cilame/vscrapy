@@ -63,7 +63,9 @@ class VSpider(RedisSpider):
         if item:
             try:
                 ret = dict(item)
-                ret['b2b89079b2f7befcf4691a98a3f0a2a2'] = taskid
+                ret['b2b89079b2f7befcf4691a98a3f0a2a2'] = {}
+                ret['b2b89079b2f7befcf4691a98a3f0a2a2']['taskid'] = taskid
+                ret['b2b89079b2f7befcf4691a98a3f0a2a2']['spider'] = self.name
                 return ret
             except:
                 return TypeError(traceback.format_exc())
