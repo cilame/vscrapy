@@ -11,6 +11,7 @@ from scrapy.utils.python import global_object_name
 import hmac
 import json
 import logging
+import traceback
 logger = logging.getLogger(__name__)
 
 def import_driver(drivers, preferred=None):
@@ -119,15 +120,17 @@ class VscrapyPipeline(object):
 
                 # 创建数据库以及数据表之后才进行对本地 dbn 连接池的绑定。
                 dbk = hmac.new(b'',str(mysql_config).encode(),'md5').hexdigest()
+                _item = item.copy()
+                _item.pop('b2b89079b2f7befcf4691a98a3f0a2a2')
                 if dbk not in self.dbn:
                     pool = adbapi.ConnectionPool(dbapiName, **mysql_config)
 
                     # 初始化生成数据库名以及数据库表名字的函数不能异步，所以这里使用了原始的连接执行的方式
                     # 可以通过 pool 直接使用 dbapiName 名字的连接方式。
-                    self.init_database(pool, mysql_config, db, table, item, taskid, spider)
+                    self.init_database(pool, mysql_config, db, table, _item, taskid, spider)
                     self.dbn[dbk] = pool
 
-                self.dbn[dbk].runInteraction(self.insert_item, db, table, item, taskid, spider)
+                self.dbn[dbk].runInteraction(self.insert_item, db, table, _item, taskid, spider)
                 return item
             else:
                 raise TypeError('Unable Parse mysql_config type:{}'.format(type(mysql_config)))
@@ -135,18 +138,21 @@ class VscrapyPipeline(object):
             return item
 
 
-
-    def insert_item(self, conn, db, table, item, taskid, spider_name):
-
-        # 这里是这个框架的魔法部分。
-        # 你需要了解，这个函数的空间是被挂钩的，并且挂钩了 response 的名字的对象
-        # 并且 response 这个对象有 _plusmeta 属性为一个字典，该字典里面还有 'taskid' 字段包含的taskid
-        # 该环境还挂钩了 spider 这个名字，并且这个对象需要一个 name 的属性来定位服务端的 spider 名字
+    def _hook(self, taskid, spider_name):
+        # 这里是这个框架关于日志处理的魔法部分。
+        # 你需要了解，虽然你看不到，但是一些函数的空间确实是被挂钩的。挂钩了 response 的名字的对象
+        # 并且 response 这个对象需要有 _plusmeta 属性为一个字典，该字典里面还有 'taskid' 字段包含的taskid
+        # 该环境还挂钩了 spider 这个名字的对象，并且这个对象需要一个 name 的属性来定位服务端的 spider 名字
         class model:pass
         response = spider = model()
         response._plusmeta = {}
         response._plusmeta['taskid'] = taskid
         spider.name = spider_name
+        return response, spider
+
+
+    def insert_item(self, conn, db, table, item, taskid, spider_name):
+        response, spider = self._hook(taskid, spider_name) # 这里有看不见的钩子
 
         # 使用 json 通用处理，存储时保证了数据类型，取数据时候使用 json.loads 来解析类型。
         table_sql = ""
@@ -155,46 +161,44 @@ class VscrapyPipeline(object):
 
         try:
             conn.execute('INSERT INTO `{}`.`{}` VALUES({})'.format(db, table, table_sql.strip(',')))
-            self.stats.inc_value('collections/db:{}_table:{}/count'.format(db, table), spider=spider)
+            self.stats.inc_value('item_mysql/db:{}/table:{}/count'.format(db, table), spider=spider)
         except Exception as e:
-            import traceback
             traceback.print_exc()
 
             ex_class = global_object_name(e.__class__)
-            self.stats.inc_value('collections/exception_count', spider=spider)
-            self.stats.inc_value('collections/exception_type_count/%s' % ex_class, spider=spider)
+            self.stats.inc_value('item/exception_count', spider=spider)
+            self.stats.inc_value('item/exception_type_count/%s' % ex_class, spider=spider)
 
     def init_database(self, pool, mysql_config, db, table, item, taskid, spider_name):
+        response, spider = self._hook(taskid, spider_name) # 这里有看不见的钩子
+
         # 需要注意的是，在一些老版本的mysql 里面并不支持 utf8mb4。
-        # 尽量使用大于 5.5 版本的mysql。
+        # 所以：这都什么时代了，赶紧使用大于 5.5 版本的 mysql !
         charset = mysql_config.get('charset')
         
         '''
         CREATE TABLE `student` (
-          `s_id` varchar(max) default NULL,
-          `s_name` varchar(255) default NULL,
-          `s_age` varchar(255) default NULL,
-          `s_msg` varchar(255) default NULL,
+          `s_id` MEDIUMTEXT NULL,
+          `s_name` MEDIUMTEXT NULL,
+          `s_age` MEDIUMTEXT NULL,
+          `s_msg` MEDIUMTEXT NULL,
         );
         '''
         try:
-            # 创建db，创建表名，所有字段都以 varchar(255) 存储
             conn = pool.dbapi.connect(**mysql_config)
             cursor = conn.cursor()
             table_sql = ""
             for k,v in item.items():
-                table_sql += '`{}` nvarchar(8000) NULL,'.format(str(k))
+                # 创建db，创建表名，所有字段都以 MEDIUMTEXT 存储
+                # MEDIUMTEXT 最大能使用16M 的长度，所以对于一般的html文本已经足够。
+                table_sql += '`{}` MEDIUMTEXT NULL,'.format(str(k))
             cursor.execute('Create Database If Not Exists {} Character Set {}'.format(db, charset))
             cursor.execute('Create Table If Not Exists `{}`.`{}` ({})'.format(db, table, table_sql.strip(',')))
             conn.commit()
             cursor.close()
             conn.close()
         except Exception as e:
-            class model:pass
-            response = spider = model()
-            response._plusmeta = {}
-            response._plusmeta['taskid'] = taskid
-            spider.name = spider_name
+            traceback.print_exc()
 
             ex_class = global_object_name(e.__class__)
             self.stats.inc_value('create_db/exception_count', spider=spider)
