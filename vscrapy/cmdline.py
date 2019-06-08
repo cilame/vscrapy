@@ -216,6 +216,68 @@ def cmdline_crawl(args):
     print(json.dumps(jsondata,indent=4))
 
 
+def cmdline_runspider(args):
+    if not args:
+        return
+    spiderfile = args.spider
+    prename = re.findall(r'\[[^\[]+\]', spiderfile)
+    if prename:
+        spidername = prename[0].strip('[]')
+        spiderfile = spiderfile.replace(prename[0],'')
+    if not os.path.isfile(spiderfile):
+        print('spiderfile is not exists.')
+        return
+    with open(spiderfile,encoding='utf-8') as f:
+        script = f.read()
+    settings, _conf = _get_settings_and_conf(args)
+    server = connection.get_redis(**settings['REDIS_PARAMS'])
+    def load_spider_name_from_module(module_name):
+        module = importlib.import_module(module_name)
+        spiders = []
+        for i in dir(module):
+            c = getattr(module, i)
+            n = getattr(c, 'name', None)
+            s = getattr(c, 'start_requests', None)
+            if n and s:
+                spiders.append(n)
+        return spiders
+    spiderfile = os.path.split(spiderfile)[1].rsplit('.',1)[0]
+    spiders = load_spider_name_from_module(spiderfile.replace('.py', ''))
+    def send_script_start_work(spider_name, script):
+        taskid = server.incrby('vscrapy:taskidx')
+        jsondata = {
+            'taskid': taskid,
+            'name': spider_name,
+            'script': script,
+        }
+        data = json.dumps(jsondata)
+        server.lpush('vscrapy:gqueue:v:start_urls', data)
+        return jsondata
+
+    if len(spiders) == 0:
+        print('Unfind spider.')
+        return
+    if len(spiders) == 1:
+        spidername = spiders[0]
+        jsondata = send_script_start_work(spidername, script)
+    if len(spiders) >= 2:
+        if not prename:
+            print('[error.] \n    There are more than one spider in the spider file, \n'
+                  '    so the name of the spider can not be automatically selected.\n'
+                  '    So you need to use [] to write the name of the crawler you need to enter.\n'
+                  '    current spidername in this script: {}\n'.format(spiders) + 
+                  '[eg.] \n    "vscrapy runspider test_script.py[spider_name]" .')
+            return
+        else:
+            if spidername not in spiders:
+                print("spider:'{}' is not in spiders:{}".format(spidername, spiders))
+            else:
+                jsondata = send_script_start_work(spidername, script)
+    if 'jsondata' in locals():
+        jsondata.pop('script')
+        print('send task:')
+        print(json.dumps(jsondata,indent=4))
+
 def _parse_crawl(args):
     parse = argparse.ArgumentParser(
         usage           = None,
@@ -230,7 +292,7 @@ def _parse_crawl(args):
     parse.add_argument('-db','--db',       default=None,  help=argparse.SUPPRESS)
     loginfo = '''[options]
   type<param>
-  spider         ::spider_name
+  spider         ::spider_name[cmd:crawl] / spider_file[cmd:runspider]
   -ho,--host     ::redis host.     default: localhost
   -po,--port     ::redis port.     default: 6379
   -pa,--password ::redis password. default: None (no password)
@@ -251,6 +313,10 @@ def execute(argv=None):
         args = _parse_crawl(argv)
         cmdline_crawl(args)
         return
+    if len(argv)>=2 and argv[1] == 'runspider':
+        args = _parse_crawl(argv)
+        cmdline_runspider(args)
+        return
 
     parse = argparse.ArgumentParser(
         usage           = None,
@@ -258,7 +324,7 @@ def execute(argv=None):
         formatter_class = argparse.RawDescriptionHelpFormatter,
         description     = description,
         add_help        = False)
-    vct = ['stat','run','config','crawl']
+    vct = ['stat','run','config','crawl','runspider']
     parse.add_argument('command',          choices=vct,        help=argparse.SUPPRESS)
     parse.add_argument('-ho','--host',     default=None,       help=argparse.SUPPRESS)
     parse.add_argument('-po','--port',     default=None,       help=argparse.SUPPRESS)
@@ -276,10 +342,11 @@ def execute(argv=None):
         sys.exit()
 
     args = parse.parse_args(argv[1:])
-    if   args.command == 'run':     cmdline_run(args)
-    elif args.command == 'stat':    cmdline_stat(args)
-    elif args.command == 'config':  cmdline_config(args)
-    elif args.command == 'crawl':   cmdline_crawl(args)
+    if   args.command == 'run':       cmdline_run(args)
+    elif args.command == 'stat':      cmdline_stat(args)
+    elif args.command == 'config':    cmdline_config(args)
+    elif args.command == 'crawl':     cmdline_crawl(args) # 该处不会被使用到
+    elif args.command == 'runspider': cmdline_crawl(args) # 该处不会被使用到
 
 if __name__ == '__main__':
     execute()

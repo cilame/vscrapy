@@ -35,7 +35,7 @@ class VscrapyPipeline(object):
     def __init__(self, mysql_drivers, preferred):
 
         # 不考虑不同的数据库的收尾工作，因为一般来说不可能会有人使用超过几千几百个数据库的连接
-        # 所以这里的数据库配置将持久，知道爬虫关闭都不主动清理空间。
+        # 所以这里的数据库配置将持久，直到爬虫关闭都不主动清理空间。
         # 这里对不同连接的保存以 hash key 作为存储，保证了重复度
         self.dbn = {}
         self.db = None # 默认的数据库连接方式
@@ -103,7 +103,7 @@ class VscrapyPipeline(object):
                     taskid = _plusmeta.get('taskid')
                     spider = _plusmeta.get('spider')
                 else:
-                    raise TypeError('Unable Parse taskid:{} & spider:{}.',format(taskid, spider))
+                    raise TypeError('Unable Parse _plusmeta.')
 
                 # 这里没有就会使用默认的数据库连接方式
                 # adbapi.ConnectionPool 的第一个参数名字为 dbapiName，以此名为此处命名便于理解。
