@@ -10,7 +10,7 @@ from pprint import pprint, pformat
 
 from vscrapy.vscrapy.scrapy_redis_mod import connection
 
-__version__ = '1.0.5'
+__version__ = '1.0.6'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
@@ -241,7 +241,9 @@ def cmdline_runspider(args):
             if n and s:
                 spiders.append(n)
         return spiders
-    spiderfile = os.path.split(spiderfile)[1].rsplit('.',1)[0]
+    env, spiderfile = os.path.split(spiderfile)
+    spiderfile = spiderfile.rsplit('.',1)[0]
+    sys.path.append(env)
     spiders = load_spider_name_from_module(spiderfile.replace('.py', ''))
     def send_script_start_work(spider_name, script):
         taskid = server.incrby('vscrapy:taskidx')
