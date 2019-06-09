@@ -10,7 +10,7 @@ from pprint import pprint, pformat
 
 from vscrapy.vscrapy.scrapy_redis_mod import connection
 
-__version__ = '1.0.6'
+__version__ = '1.0.7'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
@@ -19,7 +19,8 @@ Usage
 
 Command
   run       run a vscrapy worker. (pls set redis config first.)
-  crawl     use config setting connect redis send spider script start crawl
+  crawl     use config setting. use spider_name in scrapy project like "scrapy crawl ..."
+  runspider use config setting. use spider_file in local file eg. myspider.py
   stat      use taskid check task work stat.
   config    config default host,port,password,db
 
@@ -183,6 +184,17 @@ You need to choose one of the three ways to use stat cmdline.'''
             print(_mk_pprint_taskinfo(server, mx-i, settings))
 
 
+def _send_script_start_work(spider_name, script):
+    taskid = server.incrby('vscrapy:taskidx')
+    jsondata = {
+        'taskid': taskid,
+        'name': spider_name,
+        'script': script,
+    }
+    data = json.dumps(jsondata)
+    server.lpush('vscrapy:gqueue:v:start_urls', data)
+    return jsondata
+
 def cmdline_crawl(args):
     from scrapy.utils.project import get_project_settings
     from scrapy.spiderloader import SpiderLoader
@@ -200,17 +212,7 @@ def cmdline_crawl(args):
     server = connection.get_redis(**settings['REDIS_PARAMS'])
     with open(filepath,encoding='utf-8') as f:
         script = f.read()
-    def send_script_start_work(spider_name, script):
-        taskid = server.incrby('vscrapy:taskidx')
-        jsondata = {
-            'taskid': taskid,
-            'name': spider_name,
-            'script': script,
-        }
-        data = json.dumps(jsondata)
-        server.lpush('vscrapy:gqueue:v:start_urls', data)
-        return jsondata
-    jsondata = send_script_start_work(spidername, script)
+    jsondata = _send_script_start_work(spidername, script)
     jsondata.pop('script')
     print('send task:')
     print(json.dumps(jsondata,indent=4))
@@ -245,23 +247,13 @@ def cmdline_runspider(args):
     spiderfile = spiderfile.rsplit('.',1)[0]
     sys.path.append(env)
     spiders = load_spider_name_from_module(spiderfile.replace('.py', ''))
-    def send_script_start_work(spider_name, script):
-        taskid = server.incrby('vscrapy:taskidx')
-        jsondata = {
-            'taskid': taskid,
-            'name': spider_name,
-            'script': script,
-        }
-        data = json.dumps(jsondata)
-        server.lpush('vscrapy:gqueue:v:start_urls', data)
-        return jsondata
 
     if len(spiders) == 0:
         print('Unfind spider.')
         return
     if len(spiders) == 1:
         spidername = spiders[0]
-        jsondata = send_script_start_work(spidername, script)
+        jsondata = _send_script_start_work(spidername, script)
     if len(spiders) >= 2:
         if not prename:
             print('[error.] \n    There are more than one spider in the spider file, \n'
@@ -274,7 +266,7 @@ def cmdline_runspider(args):
             if spidername not in spiders:
                 print("spider:'{}' is not in spiders:{}".format(spidername, spiders))
             else:
-                jsondata = send_script_start_work(spidername, script)
+                jsondata = _send_script_start_work(spidername, script)
     if 'jsondata' in locals():
         jsondata.pop('script')
         print('send task:')
@@ -294,14 +286,44 @@ def _parse_crawl(args):
     parse.add_argument('-db','--db',       default=None,  help=argparse.SUPPRESS)
     loginfo = '''[options]
   type<param>
-  spider         ::spider_name[cmd:crawl] / spider_file[cmd:runspider]
+  spider         ::spider_name
   -ho,--host     ::redis host.     default: localhost
   -po,--port     ::redis port.     default: 6379
   -pa,--password ::redis password. default: None (no password)
   -db,--db       ::redis db.       default: 0
 [eg.]
-use spider eg. "vscrapy crawl myspider".
-Used to locate scripts that need to be sent.'''
+use spider_name eg. "vscrapy crawl myspider".
+send task with scrapy project.
+this cmdline will auto find spider_script_file and send.'''
+    if len(args) == 2:
+        print(loginfo)
+        return 
+    args = parse.parse_args(args[2:])
+    return args
+
+def _parse_runspider(args):
+    parse = argparse.ArgumentParser(
+        usage           = None,
+        epilog          = None,
+        formatter_class = argparse.RawDescriptionHelpFormatter,
+        description     = description,
+        add_help        = False)
+    parse.add_argument('spider',           help=argparse.SUPPRESS)
+    parse.add_argument('-ho','--host',     default=None,  help=argparse.SUPPRESS)
+    parse.add_argument('-po','--port',     default=None,  help=argparse.SUPPRESS)
+    parse.add_argument('-pa','--password', default=None,  help=argparse.SUPPRESS)
+    parse.add_argument('-db','--db',       default=None,  help=argparse.SUPPRESS)
+    loginfo = '''[options]
+  type<param>
+  spider         ::spider_file
+  -ho,--host     ::redis host.     default: localhost
+  -po,--port     ::redis port.     default: 6379
+  -pa,--password ::redis password. default: None (no password)
+  -db,--db       ::redis db.       default: 0
+[eg.]
+use spider_file eg. "vscrapy runspider myspider.py".
+send task with local file.
+this cmdline will auto find spider_name and send.'''
     if len(args) == 2:
         print(loginfo)
         return 
@@ -316,7 +338,7 @@ def execute(argv=None):
         cmdline_crawl(args)
         return
     if len(argv)>=2 and argv[1] == 'runspider':
-        args = _parse_crawl(argv)
+        args = _parse_runspider(argv)
         cmdline_runspider(args)
         return
 
