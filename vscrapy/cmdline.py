@@ -10,7 +10,7 @@ from pprint import pprint, pformat
 
 from vscrapy.vscrapy.scrapy_redis_mod import connection
 
-__version__ = '1.0.7'
+__version__ = '1.0.8'
 
 description = '''Vscrapy ver:{}. (multi task scrapy_redis.)
 
@@ -184,7 +184,7 @@ You need to choose one of the three ways to use stat cmdline.'''
             print(_mk_pprint_taskinfo(server, mx-i, settings))
 
 
-def _send_script_start_work(spider_name, script):
+def _send_script_start_work(spider_name, script, server):
     taskid = server.incrby('vscrapy:taskidx')
     jsondata = {
         'taskid': taskid,
@@ -212,7 +212,7 @@ def cmdline_crawl(args):
     server = connection.get_redis(**settings['REDIS_PARAMS'])
     with open(filepath,encoding='utf-8') as f:
         script = f.read()
-    jsondata = _send_script_start_work(spidername, script)
+    jsondata = _send_script_start_work(spidername, script, server)
     jsondata.pop('script')
     print('send task:')
     print(json.dumps(jsondata,indent=4))
@@ -253,7 +253,7 @@ def cmdline_runspider(args):
         return
     if len(spiders) == 1:
         spidername = spiders[0]
-        jsondata = _send_script_start_work(spidername, script)
+        jsondata = _send_script_start_work(spidername, script, server)
     if len(spiders) >= 2:
         if not prename:
             print('[error.] \n    There are more than one spider in the spider file, \n'
@@ -266,7 +266,7 @@ def cmdline_runspider(args):
             if spidername not in spiders:
                 print("spider:'{}' is not in spiders:{}".format(spidername, spiders))
             else:
-                jsondata = _send_script_start_work(spidername, script)
+                jsondata = _send_script_start_work(spidername, script, server)
     if 'jsondata' in locals():
         jsondata.pop('script')
         print('send task:')
